@@ -6,7 +6,25 @@ import fs from "fs";
 const app = express();
 const PORT = 3000;
 
-const DB_PATH = path.join(process.cwd(), "db.json");
+const DB_PATH = process.env.VERCEL 
+  ? "/tmp/db.json"
+  : path.join(process.cwd(), "db.json");
+
+// Ensure db.json exists in /tmp on Vercel
+if (process.env.VERCEL) {
+  try {
+    if (!fs.existsSync(DB_PATH)) {
+      const originalPath = path.join(process.cwd(), "db.json");
+      if (fs.existsSync(originalPath)) {
+        fs.copyFileSync(originalPath, DB_PATH);
+      } else {
+        fs.writeFileSync(DB_PATH, JSON.stringify({}));
+      }
+    }
+  } catch (err) {
+    console.error("Failed to copy/initialize db.json to /tmp:", err);
+  }
+}
 
 function readDB() {
   try {
@@ -422,14 +440,18 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", time: new Date().toISOString(), env: process.env.NODE_ENV });
 });
 
-setupVite(app).then(() => {
-  const server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+if (!process.env.VERCEL) {
+  setupVite(app).then(() => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+    });
+    
+    server.on('error', (err) => {
+      console.error("Server error:", err);
+    });
+  }).catch(err => {
+    console.error("Failed to start server during setupVite:", err);
   });
-  
-  server.on('error', (err) => {
-    console.error("Server error:", err);
-  });
-}).catch(err => {
-  console.error("Failed to start server during setupVite:", err);
-});
+}
+
+export default app;
