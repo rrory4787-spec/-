@@ -87,33 +87,66 @@ export default function App() {
   // Auth Protection
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#0A0A0A] p-4 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] p-6 text-center overflow-hidden">
+        {/* Dynamic Background Banner */}
+        <div className="absolute inset-x-0 top-0 h-[50%] w-full overflow-hidden opacity-30">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/90 to-[#050505]" />
+          <motion.div 
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 2 }}
+            className="w-full h-full bg-[#0A0A0A] flex items-center justify-center relative"
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[150px] bg-gradient-to-r from-[#C5A059] via-emerald-500 via-blue-500 via-purple-500 to-[#C5A059] blur-[100px] opacity-20 rotate-[-5deg]" />
+          </motion.div>
+        </div>
+
         <motion.div 
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="mb-8 flex h-40 w-40 items-center justify-center rounded-full overflow-hidden shadow-[0_0_80px_rgba(197,160,89,0.3)] transition-transform hover:scale-105 duration-500 border-4 border-[#C5A059]/20"
+          transition={{ duration: 0.8 }}
+          className="relative z-10 max-w-2xl w-full"
         >
-          <img 
-            src={appSettings?.logoUrl || "/src/assets/images/app_logo_coin_v3_1781318698537.jpg"} 
-            alt="Khazain Al-Ard Logo" 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
+          <div className="mb-12 flex justify-center">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="h-40 w-40 items-center justify-center rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(197,160,89,0.15)] border-2 border-[#C5A059]/10 bg-[#111]"
+            >
+              <img 
+                src={appSettings?.logoUrl || "/src/assets/images/app_logo_coin_v3_1781318698537.jpg"} 
+                alt="Khazain Al-Ard Logo" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </motion.div>
+          </div>
+          
+          <h1 className="mb-6 text-6xl md:text-8xl font-black tracking-tighter text-white uppercase italic leading-none">
+            خزائن <span className="text-[#C5A059]">الأرض</span>
+          </h1>
+          
+          <p className="mb-14 max-w-md mx-auto text-gray-500 font-medium leading-relaxed text-xl">
+            البوابة الرقمية لمجتمع السيادة والتمكين. <br />
+            تواصل، شارك، واستثمر في مستقبل واعد.
+          </p>
+
+          <button 
+            onClick={login}
+            className="group relative inline-flex items-center gap-6 overflow-hidden rounded-[2rem] bg-white px-16 py-7 font-black text-black transition-all hover:scale-105 active:scale-95 shadow-[0_30px_60px_rgba(255,255,255,0.05)]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <LogIn className="h-7 w-7 text-[#C5A059]" />
+            <span className="text-2xl">تسجيل الدخول للمجتمع</span>
+          </button>
+
+          <div className="mt-16 flex items-center justify-center gap-8 text-[11px] text-gray-700 font-mono tracking-[0.3em] uppercase italic">
+            <span className="flex items-center gap-2 animate-pulse"><Zap className="h-3 w-3 text-[#C5A059]"/> Decentralized</span>
+            <span className="w-1 h-1 bg-gray-800 rounded-full" />
+            <span>Encrypted Ledger</span>
+            <span className="w-1 h-1 bg-gray-800 rounded-full" />
+            <span>v4.2.0</span>
+          </div>
         </motion.div>
-        <h1 className="mb-2 text-5xl font-black tracking-tighter text-[#C5A059] uppercase italic">
-          خزائن الأرض
-        </h1>
-        <p className="mb-10 max-w-sm text-gray-400 font-medium leading-relaxed text-lg">
-          البوابة الرقمية لمجتمع المستثمرين السياديين. <br />
-          تواصل، شارك، واستثمر في مستقبل واعد.
-        </p>
-        <button 
-          onClick={login}
-          className="group relative flex items-center gap-4 overflow-hidden rounded-2xl bg-[#C5A059] px-12 py-5 font-black text-black transition-all hover:scale-105 hover:bg-white active:scale-95 shadow-[0_20px_40px_rgba(197,160,89,0.2)]"
-        >
-          <LogIn className="h-6 w-6" />
-          <span className="text-xl">تسجيل الدخول للمجتمع</span>
-        </button>
       </div>
     );
   }

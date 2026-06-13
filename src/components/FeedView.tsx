@@ -126,17 +126,43 @@ export function FeedView({ user, posts, onPost, onLike, onDelete }: FeedViewProp
         className="hidden" 
       />
 
-      {/* Page Header */}
+      {/* Sleek Welcome Banner inspired by the image */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-10 lg:mb-14"
+        className="relative h-64 lg:h-80 w-full rounded-[2.5rem] overflow-hidden mb-12 shadow-2xl border border-white/5"
       >
-        <div className="flex items-center gap-4 mb-3">
-          <div className="w-2 h-10 bg-[#C5A059] rounded-full shadow-[0_0_15px_rgba(197,160,89,0.5)]" />
-          <h2 className="text-4xl lg:text-5xl font-black text-[#C5A059] italic tracking-tighter uppercase">حائط السيادة</h2>
+        <div className="absolute inset-0 bg-[#050505]" />
+        {/* The sleek gradient bar from the image */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[100px] bg-gradient-to-r from-[#C5A059] via-emerald-500 via-blue-500 via-purple-500 to-[#C5A059] blur-[100px] opacity-20 rotate-[-5deg]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[1px] bg-gradient-to-r from-transparent via-[#C5A059] via-emerald-500 via-blue-500 via-purple-500 to-transparent opacity-30 rotate-[-5deg]" />
+        
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-gradient-to-t from-[#050505] via-transparent to-transparent">
+          <motion.h3 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-4xl lg:text-7xl font-black text-white italic tracking-tighter uppercase leading-none mb-3"
+          >
+            حقّق <span className="text-[#C5A059]">أفكارك</span> الثورية
+          </motion.h3>
+          <p className="text-gray-400 font-medium text-sm lg:text-lg tracking-widest uppercase">The fastest path to sovereignty</p>
         </div>
-        <p className="text-gray-400 max-w-2xl text-lg font-medium">ساحة التواصل الحر لأعضاء مجتمع خزائن الأرض.</p>
+      </motion.div>
+
+      {/* Page Header (Optional, kept for structure but styled smaller) */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="mb-8 flex items-center justify-between"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-1.5 h-8 bg-[#C5A059] rounded-full" />
+          <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">حائط السيادة</h2>
+        </div>
+        <div className="text-[10px] text-gray-600 font-mono tracking-widest uppercase flex items-center gap-2">
+          <Globe className="h-3 w-3" /> LIVE NETWORK
+        </div>
       </motion.div>
 
       {/* Facebook-style Compose Box */}
