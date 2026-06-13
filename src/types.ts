@@ -40,6 +40,29 @@ export interface Post {
   isDeleted?: boolean;
 }
 
+export interface Course {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl?: string;
+  videoUrl?: string;
+  lessonsCount: number;
+  allowedLayer: AllowedLayer;
+  createdAt: number | string;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location?: string;
+  allowedLayer: AllowedLayer;
+  attendees: string[]; // User emails
+  createdAt: number | string;
+}
+
 export interface Comment {
   id: string;
   postId: string;

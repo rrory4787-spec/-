@@ -33,7 +33,7 @@ export function Navbar({ user, onLogout, onProfileClick, onAdminClick, logoUrl }
               referrerPolicy="no-referrer"
             />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-[#C5A059] hidden sm:block">خزائن الأرض</h1>
+          <h1 className="text-2xl font-black text-[#C5A059] hidden sm:block font-aref bg-gradient-to-r from-[#C5A059] via-[#E2C799] to-[#C5A059] bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(197,160,89,0.3)] tracking-wider">خزائن الأرض</h1>
         </div>
 
         <div className="flex-1 max-w-md px-8 hidden md:block">

@@ -6,6 +6,11 @@
   --color-dark-surface: #121212;
   --color-dark-sidebar: #1A1A1A;
   --color-dark-bg: #0A0A0A;
+  
+  --font-cairo: "Cairo", sans-serif;
+  --font-amiri: "Amiri", serif;
+  --font-aref: "Aref Ruqaa", serif;
+  --font-tajawal: "Tajawal", sans-serif;
 }
 
 body {

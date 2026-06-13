@@ -10,9 +10,18 @@ const DB_PATH = path.join(process.cwd(), "db.json");
 
 function readDB() {
   try {
-    return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
+    const data = JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
+    return {
+      Users: data.Users || {},
+      Main_Feed: data.Main_Feed || [],
+      Likes: data.Likes || [],
+      Messages: data.Messages || [],
+      App_Settings: data.App_Settings || {},
+      Courses: data.Courses || [],
+      Events: data.Events || []
+    };
   } catch (e) {
-    return { Users: {}, Main_Feed: [], Likes: [], Messages: [], App_Settings: {} };
+    return { Users: {}, Main_Feed: [], Likes: [], Messages: [], App_Settings: {}, Courses: [], Events: [] };
   }
 }
 
@@ -207,14 +216,25 @@ app.get("/api/feed", async (req, res) => {
     const dbData = readDB();
     
     let posts = (dbData.Main_Feed || []);
+    const users = dbData.Users || {};
     
     // Regular users don't see deleted posts
     if (isAdmin !== "true") {
       posts = posts.filter((p: any) => !p.isDeleted);
     }
 
-    posts = posts.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    res.json(posts);
+    // Enhance posts with the LATEST user data (Magnet effect)
+    const enhancedPosts = posts.map((post: any) => {
+      const author = users[post.authorEmail];
+      return {
+        ...post,
+        authorName: author?.User_Name || post.authorName || "عضو المجتمع",
+        authorPhotoUrl: author?.photoUrl || post.authorPhotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(author?.User_Name || post.authorName || 'U')}&background=C5A059&color=121212`
+      };
+    });
+
+    const sortedPosts = enhancedPosts.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    res.json(sortedPosts);
   } catch (error) {
     console.error("Error fetching feed:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -244,7 +264,7 @@ app.post("/api/feed/delete", async (req, res) => {
 
 app.post("/api/feed", async (req, res) => {
   try {
-    const { Post_Content, Post_Category, Allowed_Layer, authorEmail, authorName, imageUrl, videoUrl } = req.body;
+    const { Post_Content, Post_Category, Allowed_Layer, authorEmail, authorName, authorPhotoUrl, imageUrl, videoUrl } = req.body;
     const dbData = readDB();
     const postData = {
       Post_ID: `post_${Date.now()}`,
@@ -253,6 +273,7 @@ app.post("/api/feed", async (req, res) => {
       Allowed_Layer: Allowed_Layer || "All",
       authorEmail,
       authorName,
+      authorPhotoUrl,
       imageUrl,
       videoUrl,
       createdAt: new Date().toISOString(),
@@ -264,6 +285,83 @@ app.post("/api/feed", async (req, res) => {
     res.json(postData);
   } catch (error) {
     console.error("Error creating post:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// API routes for Courses
+app.get("/api/courses", async (req, res) => {
+  try {
+    const dbData = readDB();
+    res.json(dbData.Courses || []);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/courses", async (req, res) => {
+  try {
+    const dbData = readDB();
+    const course = {
+      id: `course_${Date.now()}`,
+      ...req.body,
+      createdAt: new Date().toISOString()
+    };
+    dbData.Courses.push(course);
+    writeDB(dbData);
+    res.json(course);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// API routes for Events
+app.get("/api/events", async (req, res) => {
+  try {
+    const dbData = readDB();
+    res.json(dbData.Events || []);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/events", async (req, res) => {
+  try {
+    const dbData = readDB();
+    const event = {
+      id: `event_${Date.now()}`,
+      ...req.body,
+      attendees: [],
+      createdAt: new Date().toISOString()
+    };
+    dbData.Events.push(event);
+    writeDB(dbData);
+    res.json(event);
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/events/:id/attend", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userEmail } = req.body;
+    const dbData = readDB();
+    const eventIndex = dbData.Events.findIndex((e: any) => e.id === id);
+    
+    if (eventIndex !== -1) {
+      const attendees = dbData.Events[eventIndex].attendees || [];
+      if (attendees.includes(userEmail)) {
+        dbData.Events[eventIndex].attendees = attendees.filter((e: string) => e !== userEmail);
+      } else {
+        dbData.Events[eventIndex].attendees = [...attendees, userEmail];
+      }
+      writeDB(dbData);
+      res.json(dbData.Events[eventIndex]);
+    } else {
+      res.status(404).json({ error: "Event not found" });
+    }
+  } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
 });

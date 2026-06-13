@@ -1,3 +1,4 @@
+import React from 'react';
 import { Post } from '../../types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,6 +9,7 @@ import { ar } from 'date-fns/locale';
 
 interface PostCardProps {
   post: Post;
+  key?: React.Key;
   isLiked?: boolean;
   isWatched?: boolean;
   onLike?: () => void | Promise<void>;

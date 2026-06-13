@@ -16,14 +16,26 @@ import {
   UserCheck,
   UserX,
   Shield,
-  X
+  X,
+  GraduationCap,
+  Calendar,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { fetchSettings, updateSettings, createPost, fetchFeed, fetchAllUsers, updateUser } from '../lib/db';
-import { Post, User } from '../types';
+import { 
+  fetchSettings, 
+  updateSettings, 
+  createPost, 
+  fetchFeed, 
+  fetchAllUsers, 
+  updateUser,
+  createCourse,
+  createEvent
+} from '../lib/db';
+import { Post, User, Course, Event } from '../types';
 
 interface AdminViewProps {
   user: User;
@@ -45,9 +57,10 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
+  // App Sections State
+  const [activeAdminTab, setActiveAdminTab] = useState<'settings' | 'members' | 'posts' | 'courses' | 'events'>('settings');
+
   // New Post State
-  const [showAddPost, setShowAddPost] = useState(false);
-  const [showMembers, setShowMembers] = useState(false);
   const [postDraft, setPostDraft] = useState<Partial<Post>>({
     title: '',
     content: '',
@@ -55,6 +68,26 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
     year: '2026'
   });
   const [postLoading, setPostLoading] = useState(false);
+
+  // New Course State
+  const [courseDraft, setCourseDraft] = useState<Partial<Course>>({
+    title: '',
+    description: '',
+    lessonsCount: 0,
+    allowedLayer: 'All'
+  });
+  const [courseLoading, setCourseLoading] = useState(false);
+
+  // New Event State
+  const [eventDraft, setEventDraft] = useState<Partial<Event>>({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    location: '',
+    allowedLayer: 'All'
+  });
+  const [eventLoading, setEventLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -127,8 +160,9 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
       // The content can combine title and content if desired, or we just pass content
       const fullContent = `${postDraft.title}\n\n${postDraft.content}`;
       await createPost(user as any, fullContent, postDraft.category, 'All', postDraft.imageUrl || postDraft.mediaUrl, postDraft.videoUrl);
-      setShowAddPost(false);
       setPostDraft({ title: '', content: '', category: 'Modern', year: '2026', imageUrl: '', videoUrl: '', mediaUrl: '' });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
       // Refresh feed in log
       const postsData = await fetchFeed(true);
       setAllPosts(postsData);
@@ -136,6 +170,36 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
       console.error("Failed to create post:", error);
     } finally {
       setPostLoading(false);
+    }
+  };
+
+  const handleAddCourse = async () => {
+    if (!courseDraft.title || !courseDraft.description) return;
+    setCourseLoading(true);
+    try {
+      await createCourse(courseDraft);
+      setCourseDraft({ title: '', description: '', lessonsCount: 0, allowedLayer: 'All' });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (error) {
+      console.error("Failed to create course:", error);
+    } finally {
+      setCourseLoading(false);
+    }
+  };
+
+  const handleAddEvent = async () => {
+    if (!eventDraft.title || !eventDraft.date) return;
+    setEventLoading(true);
+    try {
+      await createEvent(eventDraft);
+      setEventDraft({ title: '', description: '', date: '', time: '', location: '', allowedLayer: 'All' });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (error) {
+      console.error("Failed to create event:", error);
+    } finally {
+      setEventLoading(false);
     }
   };
 
@@ -147,32 +211,60 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
 
   return (
     <div className="flex-1 bg-[#0A0A0A] p-6 flex flex-col gap-8 overflow-y-auto max-w-5xl mx-auto w-full custom-scrollbar">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-8 bg-red-600 rounded-full" />
-          <h2 className="text-3xl font-bold text-white tracking-tighter italic">مركز التحكم والسيادة السيبرانية</h2>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-8 bg-red-600 rounded-full" />
+            <h2 className="text-3xl font-bold text-white tracking-tighter italic">مركز التحكم والسيادة السيبرانية</h2>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-wrap gap-2">
           <Button 
-            variant="ghost"
-            onClick={() => setShowMembers(!showMembers)}
-            className={`h-12 px-6 rounded-xl font-bold gap-2 ${showMembers ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
+            variant="ghost" 
+            onClick={() => setActiveAdminTab('settings')}
+            className={`flex-1 min-w-[120px] h-12 rounded-xl font-bold gap-2 ${activeAdminTab === 'settings' ? 'bg-[#C5A059] text-black hover:bg-[#C5A059]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
           >
-            <Users className="h-5 w-5" />
-            إدارة الأعضاء
+            <Settings className="h-5 w-5" />
+            الهوية
           </Button>
           <Button 
-            onClick={() => setShowAddPost(!showAddPost)}
-            className="bg-[#C5A059] text-black hover:bg-[#B48F48] h-12 px-6 rounded-xl font-bold gap-2"
+            variant="ghost" 
+            onClick={() => setActiveAdminTab('members')}
+            className={`flex-1 min-w-[120px] h-12 rounded-xl font-bold gap-2 ${activeAdminTab === 'members' ? 'bg-[#C5A059] text-black hover:bg-[#C5A059]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
           >
-          {showAddPost ? <Settings className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-          {showAddPost ? 'إدارة الهوية' : 'إضافة فرصة للحائط'}
-        </Button>
+            <Users className="h-5 w-5" />
+            الأعضاء
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => setActiveAdminTab('posts')}
+            className={`flex-1 min-w-[120px] h-12 rounded-xl font-bold gap-2 ${activeAdminTab === 'posts' ? 'bg-[#C5A059] text-black hover:bg-[#C5A059]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <Plus className="h-5 w-5" />
+            الفرص
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => setActiveAdminTab('courses')}
+            className={`flex-1 min-w-[120px] h-12 rounded-xl font-bold gap-2 ${activeAdminTab === 'courses' ? 'bg-[#C5A059] text-black hover:bg-[#C5A059]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <GraduationCap className="h-5 w-5" />
+            الدورات
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => setActiveAdminTab('events')}
+            className={`flex-1 min-w-[120px] h-12 rounded-xl font-bold gap-2 ${activeAdminTab === 'events' ? 'bg-[#C5A059] text-black hover:bg-[#C5A059]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <Calendar className="h-5 w-5" />
+            الفعاليات
+          </Button>
+        </div>
       </div>
-    </div>
 
-    <div className="grid grid-cols-1 gap-8">
-        {showMembers ? (
+      <div className="grid grid-cols-1 gap-8">
+        {activeAdminTab === 'members' ? (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -309,7 +401,7 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
               </CardContent>
             </Card>
           </motion.div>
-        ) : !showAddPost ? (
+        ) : activeAdminTab === 'settings' ? (
           <Card className="bg-[#111111] border-gray-800">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -379,6 +471,155 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
               </div>
             </CardContent>
           </Card>
+        ) : activeAdminTab === 'courses' ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-6"
+          >
+            <Card className="bg-[#111111] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <GraduationCap className="h-5 w-5 text-blue-500" />
+                  إضافة دورة تدريبية جديدة
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400">عنوان الدورة</label>
+                  <Input 
+                    value={courseDraft.title}
+                    onChange={e => setCourseDraft({...courseDraft, title: e.target.value})}
+                    placeholder="مثال: أساسيات التداول السيادي"
+                    className="bg-black border-gray-800 text-white h-12 rounded-xl focus:ring-[#C5A059]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400">الوصف</label>
+                  <Textarea 
+                    value={courseDraft.description}
+                    onChange={e => setCourseDraft({...courseDraft, description: e.target.value})}
+                    placeholder="اكتب وصفاً مختصراً للدورة..."
+                    className="bg-black border-gray-800 text-white rounded-xl focus:ring-[#C5A059]"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-400">عدد الدروس</label>
+                    <Input 
+                      type="number"
+                      value={courseDraft.lessonsCount}
+                      onChange={e => setCourseDraft({...courseDraft, lessonsCount: parseInt(e.target.value) || 0})}
+                      className="bg-black border-gray-800 text-white h-12 rounded-xl focus:ring-[#C5A059]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-400">الطبقة المستهدفة</label>
+                    <select 
+                      value={courseDraft.allowedLayer}
+                      onChange={e => setCourseDraft({...courseDraft, allowedLayer: e.target.value as any})}
+                      className="w-full bg-black border border-gray-800 text-white h-12 rounded-xl px-4 focus:ring-[#C5A059] outline-none"
+                    >
+                      <option value="All">الجميع</option>
+                      <option value="Layer_250">Silver (250+)</option>
+                      <option value="Layer_500">Gold (500+)</option>
+                      <option value="Layer_700">Platinum (700+)</option>
+                    </select>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleAddCourse}
+                  disabled={courseLoading || !courseDraft.title}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-black text-lg gap-3"
+                >
+                  {courseLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
+                  إضافة الدورة للأكاديمية
+                </Button>
+                {success && activeAdminTab === 'courses' && (
+                  <div className="text-center text-green-500 font-bold p-2 bg-green-500/10 rounded-lg border border-green-500/20">تمت إضافة الدورة بنجاح</div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : activeAdminTab === 'events' ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-6"
+          >
+            <Card className="bg-[#111111] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-emerald-500" />
+                  إضافة فعالية جديدة للمجتمع
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400">اسم الفعالية</label>
+                  <Input 
+                    value={eventDraft.title}
+                    onChange={e => setEventDraft({...eventDraft, title: e.target.value})}
+                    placeholder="مثال: الاجتماع السري السنوي"
+                    className="bg-black border-gray-800 text-white h-12 rounded-xl focus:ring-[#C5A059]"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-400">التاريخ</label>
+                    <Input 
+                      type="date"
+                      value={eventDraft.date}
+                      onChange={e => setEventDraft({...eventDraft, date: e.target.value})}
+                      className="bg-black border-gray-800 text-white h-12 rounded-xl focus:ring-[#C5A059]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-400">الوقت</label>
+                    <Input 
+                      type="time"
+                      value={eventDraft.time}
+                      onChange={e => setEventDraft({...eventDraft, time: e.target.value})}
+                      className="bg-black border-gray-800 text-white h-12 rounded-xl focus:ring-[#C5A059]"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400">الموقع (اختياري)</label>
+                  <Input 
+                    value={eventDraft.location}
+                    onChange={e => setEventDraft({...eventDraft, location: e.target.value})}
+                    placeholder="سيتم تحديث الحاضرين فقط..."
+                    className="bg-black border-gray-800 text-white h-12 rounded-xl focus:ring-[#C5A059]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400">صلاحية الحضور</label>
+                  <select 
+                    value={eventDraft.allowedLayer}
+                    onChange={e => setEventDraft({...eventDraft, allowedLayer: e.target.value as any})}
+                    className="w-full bg-black border border-gray-800 text-white h-12 rounded-xl px-4 focus:ring-[#C5A059] outline-none"
+                  >
+                    <option value="All">الجميع</option>
+                    <option value="Layer_250">Silver (250+)</option>
+                    <option value="Layer_500">Gold (500+)</option>
+                    <option value="Layer_700">Platinum (700+)</option>
+                  </select>
+                </div>
+                <Button 
+                  onClick={handleAddEvent}
+                  disabled={eventLoading || !eventDraft.title || !eventDraft.date}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl font-black text-lg gap-3"
+                >
+                  {eventLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Plus className="h-6 w-6" />}
+                  تثبيت الفعالية في الأجندة
+                </Button>
+                {success && activeAdminTab === 'events' && (
+                  <div className="text-center text-green-500 font-bold p-2 bg-green-500/10 rounded-lg border border-green-500/20">تمت إضافة الفعالية بنجاح</div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
@@ -564,7 +805,7 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button 
               onClick={() => {
-                setShowAddPost(true);
+                setActiveAdminTab('posts');
                 setPostDraft(prev => ({...prev, category: 'Modern', title: 'تقرير جديد'}));
               }}
               className="flex flex-col items-center justify-center p-6 bg-[#111] border border-gray-800 rounded-3xl hover:bg-white/5 transition-all gap-2 group text-white"
@@ -574,7 +815,7 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
             </button>
             <button 
               onClick={() => {
-                setShowAddPost(true);
+                setActiveAdminTab('posts');
                 setPostDraft(prev => ({...prev, category: 'Industrial', title: 'صورة جديدة'}));
               }}
               className="flex flex-col items-center justify-center p-6 bg-[#111] border border-gray-800 rounded-3xl hover:bg-white/5 transition-all gap-2 group text-white"
@@ -584,7 +825,7 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
             </button>
             <button 
               onClick={() => {
-                setShowAddPost(true);
+                setActiveAdminTab('posts');
                 setPostDraft(prev => ({...prev, category: 'Neo-Classic', title: 'فيديو جديد'}));
               }}
               className="flex flex-col items-center justify-center p-6 bg-[#111] border border-gray-800 rounded-3xl hover:bg-white/5 transition-all gap-2 group text-white"

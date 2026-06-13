@@ -1,4 +1,53 @@
-import { Post, User } from '../types';
+import { Post, User, Course, Event } from '../types';
+
+export async function fetchCourses(): Promise<Course[]> {
+  try {
+    const response = await fetch('/api/courses');
+    if (!response.ok) throw new Error('Failed to fetch courses');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    return [];
+  }
+}
+
+export async function createCourse(course: Partial<Course>) {
+  const response = await fetch('/api/courses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(course),
+  });
+  return response.json();
+}
+
+export async function fetchEvents(): Promise<Event[]> {
+  try {
+    const response = await fetch('/api/events');
+    if (!response.ok) throw new Error('Failed to fetch events');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    return [];
+  }
+}
+
+export async function createEvent(event: Partial<Event>) {
+  const response = await fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(event),
+  });
+  return response.json();
+}
+
+export async function toggleAttendance(eventId: string, userEmail: string) {
+  const response = await fetch(`/api/events/${eventId}/attend`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userEmail }),
+  });
+  return response.json();
+}
 
 export async function fetchFeed(isAdmin: boolean = false): Promise<Post[]> {
   try {
@@ -32,6 +81,7 @@ export async function createPost(user: User, content: string, category: string =
       Allowed_Layer: layer,
       authorEmail: user.email,
       authorName: user.name || user.User_Name,
+      authorPhotoUrl: user.photoUrl,
       imageUrl,
       videoUrl
     }),

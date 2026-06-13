@@ -8,7 +8,8 @@ import {
   ChevronLeft,
   DollarSign,
   Award,
-  Zap
+  Zap,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -17,9 +18,10 @@ import { User } from '../types';
 interface PortalViewProps {
   user: User;
   onBack: () => void;
+  onNavigate: (view: 'courses' | 'events') => void;
 }
 
-export function PortalView({ user, onBack }: PortalViewProps) {
+export function PortalView({ user, onBack, onNavigate }: PortalViewProps) {
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
 
   const affirmations = [
@@ -54,7 +56,10 @@ export function PortalView({ user, onBack }: PortalViewProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Whales Academy */}
         <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
-          <Card className="bg-[#111111] border-gray-800 hover:border-[#C5A059]/50 transition-all cursor-pointer overflow-hidden group h-full">
+          <Card 
+            className="bg-[#111111] border-gray-800 hover:border-blue-500/50 transition-all cursor-pointer overflow-hidden group h-full"
+            onClick={() => onNavigate('courses')}
+          >
             <CardHeader className="flex flex-row items-center gap-4 space-y-0">
               <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
                 <GraduationCap className="h-8 w-8" />
@@ -67,10 +72,38 @@ export function PortalView({ user, onBack }: PortalViewProps) {
             <CardContent>
               <div className="flex flex-col gap-3">
                 <div className="p-3 rounded-lg bg-[#1A1A1A] border border-gray-800 text-sm text-gray-400">
-                  <span className="text-[#C5A059] font-bold">جديد:</span> دورة "التصفير الفكري" متاحة الآن مجاناً لأعضاء الطبقة الفضية.
+                  <span className="text-[#C5A059] font-bold">جديد:</span> دورة "التصفير الفكري" متاحة الآن.
                 </div>
                 <Button className="w-full bg-[#1A1A1A] hover:bg-[#252525] text-white border border-gray-800">
                   دخول الأكاديمية
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Agenda & Events */}
+        <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+          <Card 
+            className="bg-[#111111] border-gray-800 hover:border-emerald-500/50 transition-all cursor-pointer overflow-hidden group h-full"
+            onClick={() => onNavigate('events')}
+          >
+            <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+                <Calendar className="h-8 w-8" />
+              </div>
+              <div>
+                <CardTitle className="text-xl text-white">الأجندة والفعاليات</CardTitle>
+                <p className="text-xs text-gray-500">جدول الأعمال وتأكيد حالة الحضور</p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3">
+                <div className="p-3 rounded-lg bg-[#1A1A1A] border border-gray-800 text-sm text-gray-400">
+                  <span className="text-emerald-500 font-bold">تنبيه:</span> لا تنسى تأكيد حضورك للاجتماع القادم.
+                </div>
+                <Button className="w-full bg-[#1A1A1A] hover:bg-[#252525] text-white border border-gray-800">
+                  عرض الجدول
                 </Button>
               </div>
             </CardContent>

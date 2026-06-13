@@ -173,8 +173,8 @@ export function FeedView({ user, posts, onPost, onLike, onDelete, onWatch }: Fee
         <div className="p-6">
           <div className="flex gap-4 mb-4">
             <Avatar className="h-12 w-12 border-2 border-[#C5A059]/30">
-              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} />
-              <AvatarFallback>{user.name?.substring(0, 2) || 'ع'}</AvatarFallback>
+              <AvatarImage src={user.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.User_Name || 'U')}&background=C5A059&color=121212`} />
+              <AvatarFallback>{(user.name || user.User_Name || 'ع').substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <Textarea 

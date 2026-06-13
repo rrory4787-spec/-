@@ -15,6 +15,8 @@ import { AbsoluteSovereigntyVaultView } from './components/AbsoluteSovereigntyVa
 import { ProfileView } from './components/ProfileView';
 import { MessagesView } from './components/MessagesView';
 import { AdminView } from './components/AdminView';
+import { CoursesView } from './components/CoursesView';
+import { EventsView } from './components/EventsView';
 import { NotificationCenter } from './components/NotificationCenter';
 import { Toaster } from 'sonner';
 import { MOCK_USER, MOCK_POSTS, MOCK_MEMBERS } from './lib/mock';
@@ -30,14 +32,16 @@ import {
   Crown,
   ShieldAlert,
   Zap,
-  Briefcase
+  Briefcase,
+  GraduationCap,
+  Calendar
 } from 'lucide-react';
 
 export default function App() {
   const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
   const [appSettings, setAppSettings] = useState<{ logoUrl: string } | null>(null);
-  const [currentView, setCurrentView] = useState<'feed' | 'portal' | 'partners' | 'sovereignty' | 'profile' | 'messages' | 'admin'>('feed');
+  const [currentView, setCurrentView] = useState<'feed' | 'portal' | 'partners' | 'sovereignty' | 'profile' | 'messages' | 'admin' | 'courses' | 'events'>('feed');
 
   useEffect(() => {
     // Fetch global settings
@@ -264,7 +268,11 @@ export default function App() {
               }}
             />
           ) : currentView === 'portal' ? (
-            <PortalView user={activeUser} onBack={() => setCurrentView('feed')} />
+            <PortalView user={activeUser} onBack={() => setCurrentView('feed')} onNavigate={setCurrentView as any} />
+          ) : currentView === 'courses' ? (
+            <CoursesView user={activeUser} onBack={() => setCurrentView('portal')} />
+          ) : currentView === 'events' ? (
+            <EventsView user={activeUser} onBack={() => setCurrentView('portal')} />
           ) : currentView === 'partners' ? (
             <PartnersCouncilView user={activeUser} onBack={() => setCurrentView('feed')} />
           ) : currentView === 'sovereignty' ? (
