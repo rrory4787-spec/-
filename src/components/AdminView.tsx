@@ -143,6 +143,11 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
     try {
       await updateSettings({ logoUrl: newLogo });
       setSettings({ logoUrl: newLogo });
+      try {
+        localStorage.setItem('khazain_logo', newLogo);
+      } catch (e) {
+        console.error("Local storage logo quota limit or error:", e);
+      }
       onSettingsUpdate({ logoUrl: newLogo });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);

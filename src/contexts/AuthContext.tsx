@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: () => Promise<void>;
+  loginWithEmail: (email: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   activate: () => Promise<void>;
   updateUserData: (data: Partial<User>) => void;
@@ -16,28 +17,45 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('khazain_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Fetch or create user in our custom database via the server
         try {
           const appUser = await getOrCreateAppUser(
             firebaseUser.email || '', 
             firebaseUser.displayName || 'عضو جديد'
           );
-          setUser({
+          const fullUser = {
             ...appUser,
-            // Keep Firebase UID for internal reference if needed, though email is primary key in new schema
             photoUrl: firebaseUser.photoURL || appUser.photoUrl,
-          });
+          };
+          setUser(fullUser);
+          localStorage.setItem('khazain_user', JSON.stringify(fullUser));
         } catch (error) {
           console.error("Auth synchronization error:", error);
         }
       } else {
-        setUser(null);
+        // Fallback to local session if present, otherwise null
+        try {
+          const saved = localStorage.getItem('khazain_user');
+          if (saved) {
+            setUser(JSON.parse(saved));
+          } else {
+            setUser(null);
+          }
+        } catch {
+          setUser(null);
+        }
       }
       setLoading(false);
     });
@@ -50,23 +68,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithPopup(auth, provider);
   };
 
+  const loginWithEmail = async (email: string, name: string) => {
+    setLoading(true);
+    try {
+      const appUser = await getOrCreateAppUser(email, name);
+      setUser(appUser);
+      localStorage.setItem('khazain_user', JSON.stringify(appUser));
+    } catch (error) {
+      console.error("Email login error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
-    await signOut(auth);
+    localStorage.removeItem('khazain_user');
+    setUser(null);
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Sign out error:", e);
+    }
   };
 
   const activate = async () => {
     if (user?.email) {
       const updatedUser = await dbActivate(user.email);
-      setUser(prev => prev ? { ...prev, ...updatedUser } : null);
+      const merged = { ...user, ...updatedUser };
+      setUser(merged);
+      localStorage.setItem('khazain_user', JSON.stringify(merged));
     }
   };
 
   const updateUserData = (data: Partial<User>) => {
-    setUser(prev => prev ? { ...prev, ...data } : null);
+    setUser(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, ...data };
+      localStorage.setItem('khazain_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, activate, updateUserData }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithEmail, logout, activate, updateUserData }}>
       {children}
     </AuthContext.Provider>
   );
@@ -79,3 +123,4 @@ export function useAuth() {
   }
   return context;
 }
+

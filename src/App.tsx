@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Navbar } from './components/layout/Navbar';
 import { PostCard } from './components/feed/PostCard';
@@ -40,12 +40,31 @@ import {
 export default function App() {
   const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
-  const [appSettings, setAppSettings] = useState<{ logoUrl: string } | null>(null);
+  const [appSettings, setAppSettings] = useState<{ logoUrl: string } | null>(() => {
+    try {
+      const savedLogo = localStorage.getItem('khazain_logo');
+      return savedLogo ? { logoUrl: savedLogo } : null;
+    } catch {
+      return null;
+    }
+  });
   const [currentView, setCurrentView] = useState<'feed' | 'portal' | 'partners' | 'sovereignty' | 'profile' | 'messages' | 'admin' | 'courses' | 'events'>('feed');
+
+  // Direct login form states
+  const [authEmail, setAuthEmail] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [showDirectLogin, setShowDirectLogin] = useState(false);
+  const [directLoginError, setDirectLoginError] = useState('');
+  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
 
   useEffect(() => {
     // Fetch global settings
-    fetchSettings().then(setAppSettings);
+    fetchSettings().then(data => {
+      setAppSettings(data);
+      if (data && data.logoUrl) {
+        localStorage.setItem('khazain_logo', data.logoUrl);
+      }
+    });
 
     // Check if firebase is configured
     import('@/firebase-applet-config.json').then(config => {
@@ -58,12 +77,12 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const { user, login, logout, activate, isLoading } = useAuth();
+  const { user, login, loginWithEmail, logout, activate, isLoading } = useAuth();
   const [activeUser, setActiveUser] = useState<User | null>(null);
 
   useEffect(() => {
     if (user?.email) {
-      getOrCreateAppUser(user.email, user.displayName || 'عميل جديد').then(data => {
+      getOrCreateAppUser(user.email, user.displayName || user.name || 'عميل جديد').then(data => {
         // Auto-grant admin role for specific email to ensure control
         if (user.email === 'admin@americanaash.com') {
           data.role = 'admin';
@@ -75,6 +94,26 @@ export default function App() {
       setActiveUser(null);
     }
   }, [user]);
+
+  const handleDirectLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authEmail.trim()) {
+      setDirectLoginError('الرجاء إدخال البريد الإلكتروني');
+      return;
+    }
+    setIsSubmitLoading(true);
+    setDirectLoginError('');
+    try {
+      const email = authEmail.trim().toLowerCase();
+      // Default name to email prefix if not specified
+      const name = authName.trim() || email.split('@')[0] || 'عضو المجتمع';
+      await loginWithEmail(email, name);
+    } catch (err: any) {
+      setDirectLoginError(err.message || 'حدث خطأ في عملية الدخول');
+    } finally {
+      setIsSubmitLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -91,9 +130,9 @@ export default function App() {
   // Auth Protection
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] p-6 text-center overflow-hidden">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] p-6 text-center overflow-y-auto">
         {/* Dynamic Background Banner */}
-        <div className="absolute inset-x-0 top-0 h-[50%] w-full overflow-hidden opacity-30">
+        <div className="absolute inset-x-0 top-0 h-[50%] w-full overflow-hidden opacity-30 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/90 to-[#050505]" />
           <motion.div 
             initial={{ opacity: 0, scale: 1.1 }}
@@ -109,12 +148,12 @@ export default function App() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="relative z-10 max-w-2xl w-full"
+          className="relative z-10 max-w-lg w-full py-12"
         >
-          <div className="mb-12 flex justify-center">
+          <div className="mb-8 flex justify-center">
             <motion.div 
               whileHover={{ scale: 1.05 }}
-              className="h-40 w-40 items-center justify-center rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(197,160,89,0.15)] border-2 border-[#C5A059]/10 bg-[#111]"
+              className="h-32 w-32 items-center justify-center rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(197,160,89,0.15)] border-2 border-[#C5A059]/10 bg-[#111]"
             >
               <img 
                 src={appSettings?.logoUrl || "/src/assets/images/app_logo_coin_v3_1781318698537.jpg"} 
@@ -125,23 +164,86 @@ export default function App() {
             </motion.div>
           </div>
           
-          <h1 className="mb-6 text-6xl md:text-8xl font-black tracking-tighter text-white uppercase italic leading-none">
-            خزائن <span className="text-[#C5A059]">الأرض</span>
+          <h1 className="mb-4 text-5xl md:text-7xl font-black tracking-tighter text-white uppercase italic leading-none font-aref">
+            خزائن <span className="text-[#C5A059] bg-gradient-to-r from-[#C5A059] via-[#E2C799] to-[#C5A059] bg-clip-text text-transparent">الأرض</span>
           </h1>
           
-          <p className="mb-14 max-w-md mx-auto text-gray-500 font-medium leading-relaxed text-xl">
+          <p className="mb-10 max-w-sm mx-auto text-gray-500 font-medium leading-relaxed text-lg">
             البوابة الرقمية لمجتمع السيادة والتمكين. <br />
             تواصل، شارك، واستثمر في مستقبل واعد.
           </p>
 
-          <button 
-            onClick={login}
-            className="group relative inline-flex items-center gap-6 overflow-hidden rounded-[2rem] bg-white px-16 py-7 font-black text-black transition-all hover:scale-105 active:scale-95 shadow-[0_30px_60px_rgba(255,255,255,0.05)]"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-            <LogIn className="h-7 w-7 text-[#C5A059]" />
-            <span className="text-2xl">تسجيل الدخول للمجتمع</span>
-          </button>
+          {!showDirectLogin ? (
+            <div className="flex flex-col items-center gap-4 match-viewport">
+              <button 
+                onClick={login}
+                className="group relative inline-flex items-center gap-4 overflow-hidden rounded-[2rem] bg-white px-12 py-5 font-black text-black transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(255,255,255,0.05)] text-lg cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <LogIn className="h-6 w-6 text-[#C5A059]" />
+                <span>تسجيل الدخول باستخدام Google</span>
+              </button>
+
+              <button
+                onClick={() => setShowDirectLogin(true)}
+                className="text-[#C5A059] hover:text-white transition-colors text-sm font-bold underline cursor-pointer mt-4"
+              >
+                الدخول المباشر بالبريد الإلكتروني (بدون Google)
+              </button>
+            </div>
+          ) : (
+            <motion.form 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              onSubmit={handleDirectLoginSubmit}
+              className="bg-[#111] p-8 rounded-[2rem] border border-[#C5A059]/10 text-right shadow-[0_30px_60px_rgba(0,0,0,0.5)]"
+            >
+              <h2 className="text-xl font-bold mb-4 text-[#C5A059] border-b border-gray-800 pb-2">الدخول الفوري الذكي</h2>
+              
+              <div className="mb-4">
+                <label className="block text-sm text-gray-400 mb-1 font-bold">البريد الإلكتروني الخاص بك</label>
+                <input 
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full px-4 py-3 bg-[#080808] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-[#C5A059] text-left"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm text-gray-400 mb-1 font-bold">الاسم الكامل (اختياري)</label>
+                <input 
+                  type="text"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  placeholder="مثال: فاتن عليان"
+                  className="w-full px-4 py-3 bg-[#080808] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-[#C5A059]"
+                />
+              </div>
+
+              {directLoginError && (
+                <p className="text-red-500 text-sm mb-4 bg-red-950/30 p-3 rounded-lg border border-red-500/20">{directLoginError}</p>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitLoading}
+                  className="flex-1 bg-[#C5A059] hover:bg-[#D5B069] text-black font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitLoading ? 'جاري الدخول...' : 'الدخول المباشر للمجتمع'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDirectLogin(false)}
+                  className="bg-white/5 hover:bg-white/10 text-white font-bold py-3 px-4 rounded-xl transition-all cursor-pointer"
+                >
+                  رجوع
+                </button>
+              </div>
+            </motion.form>
+          )}
 
           <div className="mt-16 flex items-center justify-center gap-8 text-[11px] text-gray-700 font-mono tracking-[0.3em] uppercase italic">
             <span className="flex items-center gap-2 animate-pulse"><Zap className="h-3 w-3 text-[#C5A059]"/> Decentralized</span>
