@@ -84,6 +84,25 @@ export async function getOrCreateAppUser(email: string, name: string): Promise<U
   }
 }
 
+export async function fetchAllUsers(): Promise<User[]> {
+  try {
+    const response = await fetch('/api/admin/users');
+    if (!response.ok) throw new Error('Failed to fetch users');
+    const data = await response.json();
+    return data.map((userData: any) => ({
+      id: userData.User_Email,
+      email: userData.User_Email,
+      name: userData.User_Name,
+      photoUrl: userData.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.User_Name)}&background=C5A059&color=121212`,
+      role: userData.role || 'user',
+      ...userData,
+    })) as User[];
+  } catch (error) {
+    console.error('Error in fetchAllUsers:', error);
+    return [];
+  }
+}
+
 export async function activateUser(email: string): Promise<User> {
   const response = await fetch(`/api/users/${encodeURIComponent(email)}/activate`, {
     method: 'POST',
@@ -133,6 +152,15 @@ export async function updateSettings(data: any) {
 
 export async function likePost(postId: string, userEmail: string) {
   const response = await fetch(`/api/posts/${postId}/like`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userEmail }),
+  });
+  return response.json();
+}
+
+export async function toggleWatchPost(postId: string, userEmail: string) {
+  const response = await fetch(`/api/posts/${postId}/watch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userEmail }),

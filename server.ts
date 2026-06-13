@@ -39,6 +39,17 @@ app.get("/api/users/:email", async (req, res) => {
   }
 });
 
+app.get("/api/admin/users", async (req, res) => {
+  try {
+    const dbData = readDB();
+    const users = Object.values(dbData.Users);
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.post("/api/users", async (req, res) => {
   try {
     const { User_Email, User_Name, Capital_Amount, Investment_Layer } = req.body;
@@ -111,6 +122,33 @@ app.post("/api/posts/:postId/like", async (req, res) => {
     writeDB(dbData);
     res.json({ success: true, isLiked: !existingLike });
   } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/posts/:postId/watch", async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { userEmail } = req.body;
+    const dbData = readDB();
+    
+    if (!dbData.Users[userEmail]) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const watchedPostIds = dbData.Users[userEmail].watchedPostIds || [];
+    const isWatched = watchedPostIds.includes(postId);
+    
+    if (isWatched) {
+      dbData.Users[userEmail].watchedPostIds = watchedPostIds.filter((id: string) => id !== postId);
+    } else {
+      dbData.Users[userEmail].watchedPostIds = [...watchedPostIds, postId];
+    }
+    
+    writeDB(dbData);
+    res.json({ success: true, isWatched: !isWatched });
+  } catch (error) {
+    console.error("Error toggling watch:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -11,7 +11,8 @@ import {
   MoreVertical,
   X,
   Plus,
-  Loader2
+  Loader2,
+  Eye
 } from 'lucide-react';
 import { PostCard } from './feed/PostCard';
 import { Post, User } from '../types';
@@ -31,10 +32,12 @@ interface FeedViewProps {
   onPost: (content: string, imageUrl?: string, videoUrl?: string) => Promise<void>;
   onLike: (postId: string) => Promise<void>;
   onDelete: (postId: string) => Promise<void>;
+  onWatch: (postId: string) => Promise<void>;
 }
 
-export function FeedView({ user, posts, onPost, onLike, onDelete }: FeedViewProps) {
+export function FeedView({ user, posts, onPost, onLike, onDelete, onWatch }: FeedViewProps) {
   const [newPostContent, setNewPostContent] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'watched'>('all');
   const [isPosting, setIsPosting] = useState(false);
   const [isReadingFile, setIsReadingFile] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -272,45 +275,74 @@ export function FeedView({ user, posts, onPost, onLike, onDelete }: FeedViewProp
           </div>
         </div>
       </Card>
+      
+      {/* Feed Filters */}
+      <div className="flex items-center gap-4 mb-8 bg-[#111] p-1.5 rounded-2xl w-fit border border-gray-800">
+        <button 
+          onClick={() => setFilterType('all')}
+          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${filterType === 'all' ? 'bg-[#C5A059] text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+        >
+          كل المشاركات
+        </button>
+        <button 
+          onClick={() => setFilterType('watched')}
+          className={`px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${filterType === 'watched' ? 'bg-[#C5A059] text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+        >
+          <Eye className="h-4 w-4" />
+          المحتوى المتابع
+        </button>
+      </div>
 
       {/* Posts Feed */}
       <div className="flex flex-col gap-8">
-        {posts.length > 0 ? (
-          posts.map((post) => (
-            <div key={post.id} className="relative group">
-              <PostCard 
-                post={post} 
-                onLike={() => onLike(post.id)} 
-              />
-              
-              {/* Post Actions (Delete) */}
-              {(user.role === 'admin' || post.authorEmail === user.email) && (
-                <div className="absolute top-6 left-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-white">
+        {(() => {
+          const filteredPosts = filterType === 'all' 
+            ? posts 
+            : posts.filter(p => user.watchedPostIds?.includes(p.id));
+
+          if (filteredPosts.length > 0) {
+            return filteredPosts.map((post) => (
+              <div key={post.id} className="relative group">
+                <PostCard 
+                  post={post} 
+                  isWatched={user.watchedPostIds?.includes(post.id)}
+                  onLike={() => onLike(post.id)} 
+                  onWatch={() => onWatch(post.id)}
+                />
+                
+                {/* Post Actions (Delete) */}
+                {(user.role === 'admin' || post.authorEmail === user.email) && (
+                  <div className="absolute top-6 left-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-white/5 hover:text-white transition-colors outline-none">
                         <MoreVertical className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#1A1A1A] border-gray-800 text-white">
-                      <DropdownMenuItem 
-                        onClick={() => onDelete(post.id)}
-                        className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        حذف المنشور
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="py-32 text-center border-2 border-dashed border-gray-800/50 rounded-[3rem] bg-white/5">
-            <p className="text-gray-400 italic text-xl">لا توجد منشورات جديدة في تغذية المجتمع حالياً...</p>
-          </div>
-        )}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-[#1A1A1A] border-gray-800 text-white">
+                        <DropdownMenuItem 
+                          onClick={() => onDelete(post.id)}
+                          className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          حذف المنشور
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+              </div>
+            ));
+          } else {
+            return (
+              <div className="py-32 text-center border-2 border-dashed border-gray-800/50 rounded-[3rem] bg-white/5">
+                <p className="text-gray-400 italic text-xl">
+                  {filterType === 'watched' 
+                    ? 'لم تقم بمتابعة أي منشورات بعد...' 
+                    : 'لا توجد منشورات جديدة في تغذية المجتمع حالياً...'}
+                </p>
+              </div>
+            );
+          }
+        })()}
       </div>
 
       <footer className="mt-20 py-10 border-t border-gray-800/50 text-center">

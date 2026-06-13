@@ -16,6 +16,7 @@ export interface User {
   Investment_Layer: InvestmentLayer;
   Sovereignty_Points: number;
   is_active: boolean;
+  watchedPostIds?: string[];
 }
 
 export interface Post {

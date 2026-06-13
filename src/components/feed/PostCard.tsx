@@ -2,18 +2,20 @@ import { Post } from '../../types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 interface PostCardProps {
   post: Post;
   isLiked?: boolean;
+  isWatched?: boolean;
   onLike?: () => void | Promise<void>;
   onComment?: () => void | Promise<void>;
+  onWatch?: () => void | Promise<void>;
 }
 
-export function PostCard({ post, isLiked, onLike, onComment }: PostCardProps) {
+export function PostCard({ post, isLiked, isWatched, onLike, onComment, onWatch }: PostCardProps) {
   return (
     <Card className="mb-4 overflow-hidden border-gray-800 bg-[#121212] rounded-2xl text-white shadow-lg transition-all hover:border-[#C5A059]/30">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6">
@@ -92,6 +94,15 @@ export function PostCard({ post, isLiked, onLike, onComment }: PostCardProps) {
         >
           <MessageCircle className="h-4 w-4" />
           <span>تعليق ({post.commentsCount})</span>
+        </button>
+
+        <button 
+          className={`flex items-center gap-2 text-xs transition-colors ${isWatched ? 'text-[#C5A059]' : 'text-gray-500 hover:text-[#C5A059]'}`}
+          onClick={onWatch}
+          title={isWatched ? 'إلغاء المتابعة' : 'متابعة المنشور'}
+        >
+          {isWatched ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          <span>{isWatched ? 'متابع' : 'متابعة'}</span>
         </button>
         
         <button 

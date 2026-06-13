@@ -11,13 +11,18 @@ import {
   Video,
   FileText,
   Trash2,
-  ShieldAlert
+  ShieldAlert,
+  Users,
+  UserCheck,
+  UserX,
+  Shield,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { fetchSettings, updateSettings, createPost, fetchFeed } from '../lib/db';
+import { fetchSettings, updateSettings, createPost, fetchFeed, fetchAllUsers, updateUser } from '../lib/db';
 import { Post, User } from '../types';
 
 interface AdminViewProps {
@@ -35,9 +40,14 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
 
   // Audit Log State
   const [allPosts, setAllPosts] = useState<Post[]>([]);
+  
+  // Members State
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   // New Post State
   const [showAddPost, setShowAddPost] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const [postDraft, setPostDraft] = useState<Partial<Post>>({
     title: '',
     content: '',
@@ -49,13 +59,39 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
   useEffect(() => {
     Promise.all([
       fetchSettings(),
-      fetchFeed(true)
-    ]).then(([settingsData, postsData]) => {
+      fetchFeed(true),
+      fetchAllUsers()
+    ]).then(([settingsData, postsData, usersData]) => {
       setSettings(settingsData);
       setAllPosts(postsData);
+      setAllUsers(usersData);
       setLoading(false);
     });
   }, []);
+
+  const handleToggleStatus = async (targetUser: User) => {
+    setUpdatingUserId(targetUser.email);
+    try {
+      const updated = await updateUser(targetUser.email, { is_active: !targetUser.is_active });
+      setAllUsers(allUsers.map(u => u.email === targetUser.email ? updated : u));
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleRoleChange = async (targetUser: User, newRole: 'admin' | 'user') => {
+    setUpdatingUserId(targetUser.email);
+    try {
+      const updated = await updateUser(targetUser.email, { role: newRole });
+      setAllUsers(allUsers.map(u => u.email === targetUser.email ? updated : u));
+    } catch (error) {
+      console.error("Failed to update user role:", error);
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,17 +152,164 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
           <div className="w-2 h-8 bg-red-600 rounded-full" />
           <h2 className="text-3xl font-bold text-white tracking-tighter italic">مركز التحكم والسيادة السيبرانية</h2>
         </div>
-        <Button 
-          onClick={() => setShowAddPost(!showAddPost)}
-          className="bg-[#C5A059] text-black hover:bg-[#B48F48] h-12 px-6 rounded-xl font-bold gap-2"
-        >
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost"
+            onClick={() => setShowMembers(!showMembers)}
+            className={`h-12 px-6 rounded-xl font-bold gap-2 ${showMembers ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
+          >
+            <Users className="h-5 w-5" />
+            إدارة الأعضاء
+          </Button>
+          <Button 
+            onClick={() => setShowAddPost(!showAddPost)}
+            className="bg-[#C5A059] text-black hover:bg-[#B48F48] h-12 px-6 rounded-xl font-bold gap-2"
+          >
           {showAddPost ? <Settings className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
           {showAddPost ? 'إدارة الهوية' : 'إضافة فرصة للحائط'}
         </Button>
       </div>
+    </div>
 
-      <div className="grid grid-cols-1 gap-8">
-        {!showAddPost ? (
+    <div className="grid grid-cols-1 gap-8">
+        {showMembers ? (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-6"
+          >
+            {/* Member Capacity Stats */}
+            <Card className="bg-[#111] border-gray-800">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="space-y-1">
+                    <h4 className="text-white font-bold flex items-center gap-2">
+                      <Users className="h-4 w-4 text-[#C5A059]" />
+                      سعة المجتمع السيادي
+                    </h4>
+                    <p className="text-xs text-gray-500">الحد الأقصى للأعضاء النشطين حسب البرمجية الحالية</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-white">{allUsers.length}</span>
+                    <span className="text-gray-600 font-bold"> / 400</span>
+                  </div>
+                </div>
+                <div className="h-3 w-full bg-black rounded-full overflow-hidden border border-gray-800">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(allUsers.length / 400) * 100}%` }}
+                    className="h-full bg-gradient-to-r from-[#C5A059] to-emerald-500 shadow-[0_0_15px_rgba(197,160,89,0.5)]"
+                  />
+                </div>
+                <p className="mt-4 text-[10px] text-gray-600 font-mono tracking-widest uppercase">
+                  Current scalability index: {((allUsers.length / 400) * 100).toFixed(1)}%
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Members List */}
+            <Card className="bg-[#111] border-gray-800">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-white">قائمة المواطنين السياديين</CardTitle>
+                  <CardDescription className="text-right">التحكم في مستويات الوصول وحالات الحسابات.</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <div className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase border border-blue-500/20">
+                    Active: {allUsers.filter(u => u.is_active).length}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-sm">
+                    <thead className="bg-white/5 text-gray-500 uppercase text-[10px] font-black">
+                      <tr>
+                        <th className="p-4">العضو</th>
+                        <th className="p-4">الدور</th>
+                        <th className="p-4">المستوى الاستثماري</th>
+                        <th className="p-4">الحالة</th>
+                        <th className="p-4">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {allUsers.map(member => (
+                        <tr key={member.email} className="hover:bg-white/5 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl overflow-hidden border border-gray-800">
+                                <img src={member.photoUrl} alt={member.name} className="w-full h-full object-cover" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-white leading-none mb-1">{member.User_Name || member.name}</div>
+                                <div className="text-[10px] text-gray-500 font-mono">{member.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              {member.role === 'admin' ? (
+                                <Shield className="h-3 w-3 text-red-500" />
+                              ) : (
+                                <Users className="h-3 w-3 text-gray-500" />
+                              )}
+                              <select 
+                                value={member.role}
+                                onChange={(e) => handleRoleChange(member, e.target.value as any)}
+                                disabled={updatingUserId === member.email || member.email === user.email}
+                                className="bg-black/40 border border-gray-800 text-[10px] font-bold rounded-lg px-2 py-1 text-white outline-none focus:ring-1 focus:ring-[#C5A059]"
+                              >
+                                <option value="user">عضو</option>
+                                <option value="admin">مدير نظام</option>
+                              </select>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className="text-[10px] font-mono text-[#C5A059] px-2 py-1 bg-[#C5A059]/5 rounded-lg border border-[#C5A059]/20">
+                              {member.Investment_Layer}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            {member.is_active ? (
+                              <span className="flex items-center gap-1 text-green-500 text-[10px] font-bold">
+                                <UserCheck className="h-3 w-3" /> نشط
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-red-500 text-[10px] font-bold opacity-50">
+                                <UserX className="h-3 w-3" /> معطل
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={updatingUserId === member.email || member.email === user.email}
+                              onClick={() => handleToggleStatus(member)}
+                              className={`h-8 px-3 text-[10px] font-black rounded-lg transition-all ${
+                                member.is_active 
+                                  ? 'hover:bg-red-500/10 hover:text-red-500 border-gray-800' 
+                                  : 'hover:bg-green-500/10 hover:text-green-500 border-gray-800'
+                              }`}
+                            >
+                              {updatingUserId === member.email ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : member.is_active ? (
+                                'تعطيل الحساب'
+                              ) : (
+                                'تنشيط الحساب'
+                              )}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : !showAddPost ? (
           <Card className="bg-[#111111] border-gray-800">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">

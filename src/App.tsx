@@ -19,7 +19,7 @@ import { NotificationCenter } from './components/NotificationCenter';
 import { Toaster } from 'sonner';
 import { MOCK_USER, MOCK_POSTS, MOCK_MEMBERS } from './lib/mock';
 import { useAuth } from './contexts/AuthContext';
-import { subscribeToPosts, createPost, likePost, deletePost, fetchFeed, fetchSettings, getOrCreateAppUser } from './lib/db';
+import { subscribeToPosts, createPost, likePost, deletePost, fetchFeed, fetchSettings, getOrCreateAppUser, toggleWatchPost } from './lib/db';
 import { Post, User } from './types';
 import { 
   LayoutGrid,
@@ -252,6 +252,16 @@ export default function App() {
               onDelete={async (postId) => {
                 await deletePost(postId, activeUser.email);
               }}
+              onWatch={async (postId) => {
+                const res = await toggleWatchPost(postId, activeUser.email);
+                if (res.success) {
+                  // Update local user state to reflect changes immediately
+                  const newWatchedIds = res.isWatched 
+                    ? [...(activeUser.watchedPostIds || []), postId]
+                    : (activeUser.watchedPostIds || []).filter(id => id !== postId);
+                  setActiveUser({ ...activeUser, watchedPostIds: newWatchedIds });
+                }
+              }}
             />
           ) : currentView === 'portal' ? (
             <PortalView user={activeUser} onBack={() => setCurrentView('feed')} />
@@ -282,7 +292,21 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
                 {posts.length > 0 ? (
                   posts.map((post) => (
-                    <PostCard key={post.id} post={post} onLike={() => likePost(post.id, activeUser.email)} />
+                    <PostCard 
+                      key={post.id} 
+                      post={post} 
+                      onLike={() => likePost(post.id, activeUser.email)}
+                      isWatched={activeUser.watchedPostIds?.includes(post.id)}
+                      onWatch={async () => {
+                        const res = await toggleWatchPost(post.id, activeUser.email);
+                        if (res.success) {
+                          const newWatchedIds = res.isWatched 
+                            ? [...(activeUser.watchedPostIds || []), post.id]
+                            : (activeUser.watchedPostIds || []).filter(id => id !== post.id);
+                          setActiveUser({ ...activeUser, watchedPostIds: newWatchedIds });
+                        }
+                      }}
+                    />
                   ))
                 ) : (
                   <div className="col-span-full py-32 text-center border-2 border-dashed border-gray-800/50 rounded-[3rem] bg-white/5">
