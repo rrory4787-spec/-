@@ -144,7 +144,12 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
       await updateSettings({ logoUrl: newLogo });
       setSettings({ logoUrl: newLogo });
       try {
-        localStorage.setItem('khazain_logo', newLogo);
+        if (newLogo.length < 1500000) {
+          localStorage.setItem('khazain_logo', newLogo);
+        } else {
+          localStorage.removeItem('khazain_logo');
+          console.log("Logo is too large for localstorage. Saved on server only.");
+        }
       } catch (e) {
         console.error("Local storage logo quota limit or error:", e);
       }
@@ -215,12 +220,12 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
   );
 
   return (
-    <div className="flex-1 bg-[#0A0A0A] p-6 flex flex-col gap-8 overflow-y-auto max-w-5xl mx-auto w-full custom-scrollbar">
+    <div className="flex-1 bg-[#0A0A0A] p-4 pb-28 md:p-6 md:pb-12 flex flex-col gap-8 overflow-y-auto max-w-5xl mx-auto w-full custom-scrollbar">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-8 bg-red-600 rounded-full" />
-            <h2 className="text-3xl font-bold text-white tracking-tighter italic">مركز التحكم والسيادة السيبرانية</h2>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-red-600 rounded-full" />
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tighter italic">مركز التحكم والسيادة السيبرانية</h2>
           </div>
         </div>
 

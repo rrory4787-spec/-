@@ -52,22 +52,22 @@ export function AbsoluteSovereigntyVaultView({ user, onBack }: AbsoluteSovereign
   }
 
   return (
-    <div className="flex-1 bg-[#050505] p-6 flex flex-col gap-8 overflow-y-auto max-w-5xl mx-auto w-full relative">
+    <div className="flex-1 bg-[#050505] p-4 pb-28 md:p-6 md:pb-12 flex flex-col gap-8 overflow-y-auto max-w-5xl mx-auto w-full relative">
       {/* Matrix-like background effect */}
       <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(to_bottom,transparent_0%,rgba(197,160,89,0.1)_50%,transparent_100%)] bg-[length:100%_4px]" />
 
       <div className="flex items-center justify-between mb-2 relative z-10">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className="relative">
-            <div className="w-3 h-10 bg-[#C5A059] rounded-full shadow-[0_0_20px_rgba(197,160,89,0.5)]" />
+            <div className="w-2 sm:w-3 h-8 sm:h-10 bg-[#C5A059] rounded-full shadow-[0_0_20px_rgba(197,160,89,0.5)]" />
             <motion.div 
               animate={{ opacity: [1, 0, 1] }}
               transition={{ repeat: Infinity, duration: 2 }}
-              className="absolute -right-2 top-0 w-1 h-3 bg-red-500 rounded-full" 
+              className="absolute -right-1.5 sm:-right-2 top-0 w-1 h-3 bg-red-500 rounded-full" 
             />
           </div>
           <div>
-            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tighter">خزائن السيادة المطلقة</h2>
+            <h2 className="text-lg sm:text-2xl md:text-4xl font-black text-white tracking-tighter">خزائن السيادة المطلقة</h2>
             <div className="flex items-center gap-2 text-[10px] text-[#C5A059] font-mono mt-1">
               <Wifi className="h-3 w-3 animate-pulse" />
               <span>ENCRYPTED_CONNECTION: ACTIVE_700</span>

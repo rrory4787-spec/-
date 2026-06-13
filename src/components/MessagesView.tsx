@@ -70,7 +70,7 @@ export function MessagesView() {
   };
 
   return (
-    <div className="flex-1 bg-[#0A0A0A] flex flex-col h-full">
+    <div className="flex-1 bg-[#0A0A0A] flex flex-col h-full pb-20 lg:pb-0">
       {/* Messages Header */}
       <div className="p-4 border-b border-gray-800 bg-[#0F0F0F] flex items-center justify-between">
         <div className="flex items-center gap-3">

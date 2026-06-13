@@ -36,12 +36,12 @@ export function SplashView({ onActivate, logoUrl }: SplashProps) {
         transition={{ duration: 1, delay: 0.2 }}
         className="relative z-10 max-w-2xl w-full"
       >
-        <div className="mb-10 flex justify-center">
+        <div className="mb-6 sm:mb-10 flex justify-center">
           <motion.div 
             initial={{ scale: 0.8, rotate: -10 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            className="w-32 h-32 rounded-3xl border-2 border-[#C5A059]/20 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(197,160,89,0.2)] bg-[#111]"
+            className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl sm:rounded-3xl border-2 border-[#C5A059]/20 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(197,160,89,0.2)] bg-[#111]"
           >
             <img 
               src={logoUrl || "/src/assets/images/app_logo_coin_v3_1781318698537.jpg"} 
@@ -52,32 +52,32 @@ export function SplashView({ onActivate, logoUrl }: SplashProps) {
           </motion.div>
         </div>
 
-        <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter italic uppercase leading-none">
+        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-3 sm:mb-4 tracking-tighter italic uppercase leading-none">
           حوّل <span className="text-[#C5A059]">أفكارك الجريئة</span> <br />
           إلى واقع سيادي
         </h1>
         
-        <p className="text-gray-400 mb-6 text-sm md:text-base font-medium tracking-wide max-w-lg mx-auto leading-relaxed">
+        <p className="text-gray-400 mb-5 sm:mb-6 text-xs sm:text-sm md:text-base font-medium tracking-wide max-w-lg mx-auto leading-relaxed px-4">
           الأداة الأسرع لتحويل الرؤى الاستثمارية إلى تمكين حقيقي. <br />
           انضم إلينا في مجتمع "خزائن الأرض".
         </p>
 
-        <div className="flex flex-col gap-6 max-w-md mx-auto">
+        <div className="flex flex-col gap-4 sm:gap-6 max-w-md mx-auto w-full px-4">
           <Button 
             onClick={onActivate}
-            className="w-full bg-white text-black h-20 rounded-3xl font-black text-2xl gap-4 shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:scale-[1.03] active:scale-[0.97] transition-all group"
+            className="w-full bg-white text-black h-14 sm:h-20 rounded-2xl sm:rounded-3xl font-black text-lg sm:text-2xl gap-3 sm:gap-4 shadow-[0_20px_40px_rgba(255,255,255,0.1)] hover:scale-[1.03] active:scale-[0.97] transition-all group"
           >
-            <Zap className="h-7 w-7 text-[#C5A059] fill-[#C5A059]" />
+            <Zap className="h-5 w-5 sm:h-7 sm:w-7 text-[#C5A059] fill-[#C5A059]" />
             تفعيل الوصول الآن
-            <ChevronRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 group-hover:translate-x-1 transition-transform" />
           </Button>
 
-          <footer className="flex items-center justify-center gap-6 text-[10px] text-gray-600 font-mono tracking-[0.3em] uppercase">
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+          <footer className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[9px] sm:text-[10px] text-gray-600 font-mono tracking-wider sm:tracking-[0.3em] uppercase">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-full border border-white/10">
               <ShieldCheck className="h-3 w-3 text-emerald-500" /> 
               Sovereign Secure
             </div>
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-full border border-white/10">
               <Lock className="h-3 w-3 text-blue-500" /> 
               Prompt to Asset
             </div>
@@ -86,8 +86,8 @@ export function SplashView({ onActivate, logoUrl }: SplashProps) {
       </motion.div>
 
       {/* Version badge like the image's small text */}
-      <div className="absolute bottom-12 text-[10px] text-gray-700 font-mono uppercase tracking-[0.5em] italic">
-        KHAZAIN AL-ARD SYTEMS • v4.2.0 • AI STUDIO INTEGRATED
+      <div className="absolute bottom-4 sm:bottom-12 text-[8px] sm:text-[10px] text-gray-700 font-mono uppercase tracking-wider sm:tracking-[0.5em] italic">
+        KHAZAIN AL-ARD SYSTEMS • v4.2.0 • AI STUDIO INTEGRATED
       </div>
     </div>
   );

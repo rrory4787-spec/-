@@ -12,7 +12,11 @@
     }
   },
   "Main_Feed": [],
+  "Likes": [],
+  "Messages": [],
   "App_Settings": {
     "logoUrl": "/src/assets/images/app_logo_coin_v3_1781318698537.jpg"
-  }
+  },
+  "Courses": [],
+  "Events": []
 }

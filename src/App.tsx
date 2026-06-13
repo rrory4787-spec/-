@@ -43,7 +43,7 @@ export default function App() {
   const [appSettings, setAppSettings] = useState<{ logoUrl: string } | null>(() => {
     try {
       const savedLogo = localStorage.getItem('khazain_logo');
-      return savedLogo ? { logoUrl: savedLogo } : null;
+      return (savedLogo && typeof savedLogo === 'string' && savedLogo.length < 1500000) ? { logoUrl: savedLogo } : null;
     } catch {
       return null;
     }
@@ -60,23 +60,50 @@ export default function App() {
   useEffect(() => {
     // Fetch global settings
     fetchSettings().then(data => {
-      if (data && data.logoUrl) {
-        const localLogo = localStorage.getItem('khazain_logo');
-        const isDefaultServerLogo = !data.logoUrl.startsWith('data:image/');
-        const isCustomLocalLogo = localLogo && localLogo.startsWith('data:image/');
-        
-        // Only overwrite local custom logo if the server loaded a new custom logo.
-        // This preserves custom logo if the server resets back to default.
-        if (isCustomLocalLogo && isDefaultServerLogo) {
-          // Keep local custom logo
-          setAppSettings({ logoUrl: localLogo });
+      try {
+        if (data && typeof data.logoUrl === 'string') {
+          let localLogo: string | null = null;
+          try {
+            localLogo = localStorage.getItem('khazain_logo');
+          } catch (err) {
+            console.error("Failed to read from localStorage:", err);
+          }
+
+          const isDefaultServerLogo = !data.logoUrl.startsWith('data:image/');
+          const isCustomLocalLogo = localLogo && typeof localLogo === 'string' && localLogo.startsWith('data:image/');
+          
+          // Only overwrite local custom logo if the server loaded a new custom logo.
+          // This preserves custom logo if the server resets back to default.
+          if (isCustomLocalLogo && isDefaultServerLogo) {
+            // Keep local custom logo
+            setAppSettings({ logoUrl: localLogo as string });
+          } else {
+            setAppSettings(data);
+            if (data.logoUrl.length < 1500000) {
+              try {
+                localStorage.setItem('khazain_logo', data.logoUrl);
+              } catch (err) {
+                console.error("Failed to write to localStorage (possibly quota exceeded):", err);
+              }
+            } else {
+              // Delete massive local storage copy to free up space
+              try {
+                localStorage.removeItem('khazain_logo');
+              } catch (err) {
+                console.error("Failed to clear local storage:", err);
+              }
+            }
+          }
         } else {
-          setAppSettings(data);
-          localStorage.setItem('khazain_logo', data.logoUrl);
+          setAppSettings(data || { logoUrl: "/src/assets/images/app_logo_coin_v3_1781318698537.jpg" });
         }
-      } else {
-        setAppSettings(data);
+      } catch (error) {
+        console.error("Error processing fetched settings:", error);
+        setAppSettings({ logoUrl: "/src/assets/images/app_logo_coin_v3_1781318698537.jpg" });
       }
+    }).catch(err => {
+      console.error("Failed to fetch settings:", err);
+      setAppSettings({ logoUrl: "/src/assets/images/app_logo_coin_v3_1781318698537.jpg" });
     });
 
     // Check if firebase is configured
@@ -165,12 +192,12 @@ export default function App() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="relative z-10 max-w-lg w-full py-12"
+          className="relative z-10 max-w-lg w-full py-6 sm:py-12 px-4"
         >
-          <div className="mb-8 flex justify-center">
+          <div className="mb-6 sm:mb-8 flex justify-center">
             <motion.div 
               whileHover={{ scale: 1.05 }}
-              className="h-32 w-32 items-center justify-center rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(197,160,89,0.15)] border-2 border-[#C5A059]/10 bg-[#111]"
+              className="h-24 w-24 sm:h-32 sm:w-32 items-center justify-center rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(197,160,89,0.15)] border-2 border-[#C5A059]/10 bg-[#111]"
             >
               <img 
                 src={appSettings?.logoUrl || "/src/assets/images/app_logo_coin_v3_1781318698537.jpg"} 
@@ -181,29 +208,29 @@ export default function App() {
             </motion.div>
           </div>
           
-          <h1 className="mb-4 text-3xl md:text-5xl font-black tracking-tighter text-white uppercase italic leading-none font-aref">
+          <h1 className="mb-3 sm:mb-4 text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-white uppercase italic leading-none font-aref">
             خزائن <span className="text-[#C5A059] bg-gradient-to-r from-[#C5A059] via-[#E2C799] to-[#C5A059] bg-clip-text text-transparent">الأرض</span>
           </h1>
           
-          <p className="mb-10 max-w-sm mx-auto text-gray-500 font-medium leading-relaxed text-sm md:text-base">
+          <p className="mb-6 sm:mb-10 max-w-sm mx-auto text-gray-500 font-medium leading-relaxed text-xs sm:text-sm md:text-base">
             البوابة الرقمية لمجتمع السيادة والتمكين. <br />
             تواصل، شارك، واستثمر في مستقبل واعد.
           </p>
 
           {!showDirectLogin ? (
-            <div className="flex flex-col items-center gap-4 match-viewport">
+            <div className="flex flex-col items-center gap-3 sm:gap-4 match-viewport w-full">
               <button 
                 onClick={login}
-                className="group relative inline-flex items-center gap-4 overflow-hidden rounded-[2rem] bg-white px-12 py-5 font-black text-black transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(255,255,255,0.05)] text-lg cursor-pointer"
+                className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-3 sm:gap-4 overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-white px-6 sm:px-12 py-4 sm:py-5 font-black text-black transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(255,255,255,0.05)] text-sm sm:text-lg cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <LogIn className="h-6 w-6 text-[#C5A059]" />
+                <LogIn className="h-5 w-5 sm:h-6 sm:w-6 text-[#C5A059]" />
                 <span>تسجيل الدخول باستخدام Google</span>
               </button>
 
               <button
                 onClick={() => setShowDirectLogin(true)}
-                className="text-[#C5A059] hover:text-white transition-colors text-sm font-bold underline cursor-pointer mt-4"
+                className="text-[#C5A059] hover:text-white transition-colors text-xs sm:text-sm font-bold underline cursor-pointer mt-2"
               >
                 الدخول المباشر بالبريد الإلكتروني (بدون Google)
               </button>
@@ -213,48 +240,48 @@ export default function App() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               onSubmit={handleDirectLoginSubmit}
-              className="bg-[#111] p-8 rounded-[2rem] border border-[#C5A059]/10 text-right shadow-[0_30px_60px_rgba(0,0,0,0.5)]"
+              className="bg-[#111] p-5 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-[#C5A059]/10 text-right shadow-[0_30px_60px_rgba(0,0,0,0.5)] mx-auto w-full max-w-md"
             >
-              <h2 className="text-xl font-bold mb-4 text-[#C5A059] border-b border-gray-800 pb-2">الدخول الفوري الذكي</h2>
+              <h2 className="text-lg sm:text-xl font-bold mb-4 text-[#C5A059] border-b border-gray-800 pb-2">الدخول الفوري الذكي</h2>
               
               <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-1 font-bold">البريد الإلكتروني الخاص بك</label>
+                <label className="block text-xs sm:text-sm text-gray-400 mb-1 font-bold">البريد الإلكتروني الخاص بك</label>
                 <input 
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full px-4 py-3 bg-[#080808] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-[#C5A059] text-left"
+                  className="w-full px-4 py-2.5 sm:py-3 bg-[#080808] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-[#C5A059] text-left text-sm"
                 />
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm text-gray-400 mb-1 font-bold">الاسم الكامل (اختياري)</label>
+                <label className="block text-xs sm:text-sm text-gray-400 mb-1 font-bold">الاسم الكامل (اختياري)</label>
                 <input 
                   type="text"
                   value={authName}
                   onChange={(e) => setAuthName(e.target.value)}
                   placeholder="مثال: فاتن عليان"
-                  className="w-full px-4 py-3 bg-[#080808] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-[#C5A059]"
+                  className="w-full px-4 py-2.5 sm:py-3 bg-[#080808] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-[#C5A059] text-sm"
                 />
               </div>
 
               {directLoginError && (
-                <p className="text-red-500 text-sm mb-4 bg-red-950/30 p-3 rounded-lg border border-red-500/20">{directLoginError}</p>
+                <p className="text-red-500 text-xs sm:text-sm mb-4 bg-red-950/30 p-3 rounded-lg border border-red-500/20">{directLoginError}</p>
               )}
 
-              <div className="flex gap-4">
+              <div className="flex gap-3 sm:gap-4">
                 <button
                   type="submit"
                   disabled={isSubmitLoading}
-                  className="flex-1 bg-[#C5A059] hover:bg-[#D5B069] text-black font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="flex-1 bg-[#C5A059] hover:bg-[#D5B069] text-black font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-sm"
                 >
-                  {isSubmitLoading ? 'جاري الدخول...' : 'الدخول المباشر للمجتمع'}
+                  {isSubmitLoading ? 'جاري الدخول...' : 'الدخول للمجتمع'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowDirectLogin(false)}
-                  className="bg-white/5 hover:bg-white/10 text-white font-bold py-3 px-4 rounded-xl transition-all cursor-pointer"
+                  className="bg-white/5 hover:bg-white/10 text-white font-bold py-2.5 sm:py-3 px-4 rounded-xl transition-all cursor-pointer text-sm"
                 >
                   رجوع
                 </button>
@@ -262,8 +289,8 @@ export default function App() {
             </motion.form>
           )}
 
-          <div className="mt-16 flex items-center justify-center gap-8 text-[11px] text-gray-700 font-mono tracking-[0.3em] uppercase italic">
-            <span className="flex items-center gap-2 animate-pulse"><Zap className="h-3 w-3 text-[#C5A059]"/> Decentralized</span>
+          <div className="mt-12 sm:mt-16 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-[9px] sm:text-[11px] text-gray-700 font-mono tracking-wider sm:tracking-[0.3em] uppercase italic">
+            <span className="flex items-center gap-1.5 animate-pulse"><Zap className="h-3 w-3 text-[#C5A059]"/> Decentralized</span>
             <span className="w-1 h-1 bg-gray-800 rounded-full" />
             <span>Encrypted Ledger</span>
             <span className="w-1 h-1 bg-gray-800 rounded-full" />

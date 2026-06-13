@@ -41,13 +41,13 @@ export function PortalView({ user, onBack, onNavigate }: PortalViewProps) {
   };
 
   return (
-    <div className="flex-1 bg-[#0A0A0A] p-6 flex flex-col gap-8 overflow-y-auto max-w-4xl mx-auto w-full">
+    <div className="flex-1 bg-[#0A0A0A] p-4 pb-28 md:p-6 md:pb-12 flex flex-col gap-8 overflow-y-auto max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-8 bg-[#C5A059] rounded-full" />
-          <h2 className="text-3xl font-bold text-white tracking-tighter">بوابة العبور والتمكين</h2>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-1.5 sm:w-2 h-6 sm:h-8 bg-[#C5A059] rounded-full" />
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tighter">بوابة العبور والتمكين</h2>
         </div>
-        <Button variant="ghost" onClick={onBack} className="text-gray-500 hover:text-white gap-2">
+        <Button variant="ghost" onClick={onBack} className="text-gray-500 hover:text-white gap-1 sm:gap-2 text-xs sm:text-sm">
           <ChevronLeft className="h-4 w-4" />
           العودة للموجز
         </Button>
