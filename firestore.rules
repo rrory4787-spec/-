@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // User Profile Rules
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoUrl', 'bio']));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'createdAt']) &&
+             data.id is string &&
+             data.name is string && data.name.size() > 0 &&
+             data.email is string &&
+             data.role in ['admin', 'user'] &&
+             data.createdAt is number;
+    }
+
+    // Post Rules
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidPost(request.resource.data) && 
+                    request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        // Allow author to update content or image
+        (resource.data.authorId == request.auth.uid && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'imageUrl'])) ||
+        // Allow anyone to update counts (likes/comments) - in a real app this would be more restricted
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount']))
+      );
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['authorId', 'authorName', 'content', 'createdAt', 'likesCount', 'commentsCount']) &&
+             data.authorId is string &&
+             data.authorName is string &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.createdAt is number &&
+             data.likesCount is number &&
+             data.commentsCount is number;
+    }
+
+    // Sub-collections
+    match /posts/{postId}/comments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+    }
+  }
+}
