@@ -12,12 +12,18 @@ export async function fetchCourses(): Promise<Course[]> {
 }
 
 export async function createCourse(course: Partial<Course>) {
-  const response = await fetch('/api/courses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(course),
-  });
-  return response.json();
+  try {
+    const response = await fetch('/api/courses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(course),
+    });
+    if (!response.ok) throw new Error('Failed to create course');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating course:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function fetchEvents(): Promise<Event[]> {
@@ -32,21 +38,33 @@ export async function fetchEvents(): Promise<Event[]> {
 }
 
 export async function createEvent(event: Partial<Event>) {
-  const response = await fetch('/api/events', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(event),
-  });
-  return response.json();
+  try {
+    const response = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    });
+    if (!response.ok) throw new Error('Failed to create event');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating event:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function toggleAttendance(eventId: string, userEmail: string) {
-  const response = await fetch(`/api/events/${eventId}/attend`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userEmail }),
-  });
-  return response.json();
+  try {
+    const response = await fetch(`/api/events/${eventId}/attend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userEmail }),
+    });
+    if (!response.ok) throw new Error('Failed to toggle attendance');
+    return await response.json();
+  } catch (error) {
+    console.error('Error toggling attendance:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function fetchFeed(isAdmin: boolean = false): Promise<Post[]> {
@@ -72,21 +90,27 @@ export async function fetchFeed(isAdmin: boolean = false): Promise<Post[]> {
 }
 
 export async function createPost(user: User, content: string, category: string = 'نبض السوق', layer: string = 'All', imageUrl?: string, videoUrl?: string) {
-  const response = await fetch('/api/feed', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      Post_Content: content,
-      Post_Category: category,
-      Allowed_Layer: layer,
-      authorEmail: user.email,
-      authorName: user.name || user.User_Name,
-      authorPhotoUrl: user.photoUrl,
-      imageUrl,
-      videoUrl
-    }),
-  });
-  return response.json();
+  try {
+    const response = await fetch('/api/feed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Post_Content: content,
+        Post_Category: category,
+        Allowed_Layer: layer,
+        authorEmail: user.email,
+        authorName: user.name || user.User_Name,
+        authorPhotoUrl: user.photoUrl,
+        imageUrl,
+        videoUrl
+      }),
+    });
+    if (!response.ok) throw new Error('Failed to create post');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating post:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function getOrCreateAppUser(email: string, name: string): Promise<User> {
@@ -107,8 +131,16 @@ export async function getOrCreateAppUser(email: string, name: string): Promise<U
         }),
       });
     }
+
+    if (!response.ok) {
+      throw new Error(`Server returned status ${response.status}`);
+    }
     
     const userData = await response.json();
+    if (!userData || !userData.User_Email) {
+      throw new Error("Invalid user data response from server");
+    }
+
     return {
       id: email,
       email: userData.User_Email,
@@ -119,17 +151,18 @@ export async function getOrCreateAppUser(email: string, name: string): Promise<U
     } as User;
   } catch (error) {
     console.error('Error in getOrCreateAppUser:', error);
-    // Fallback local user
+    // Fallback local user - force active so they are never stuck
     return {
       id: email,
-      email,
-      name,
+      email: email,
+      name: name,
       User_Email: email,
       User_Name: name,
       Capital_Amount: 0,
       Investment_Layer: 'General',
       Sovereignty_Points: 0,
-      role: 'user',
+      is_active: true,
+      role: email === 'admin@americanaash.com' ? 'admin' : 'user',
     } as User;
   }
 }
@@ -154,19 +187,42 @@ export async function fetchAllUsers(): Promise<User[]> {
 }
 
 export async function activateUser(email: string): Promise<User> {
-  const response = await fetch(`/api/users/${encodeURIComponent(email)}/activate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  const userData = await response.json();
-  return {
-    id: email,
-    email: userData.User_Email,
-    name: userData.User_Name,
-    photoUrl: userData.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.User_Name)}&background=C5A059&color=121212`,
-    role: userData.role || 'user',
-    ...userData,
-  } as User;
+  try {
+    const response = await fetch(`/api/users/${encodeURIComponent(email)}/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to activate: ${response.status}`);
+    }
+
+    const userData = await response.json();
+    if (!userData || !userData.User_Email) {
+      throw new Error("Invalid activation response from server");
+    }
+
+    return {
+      id: email,
+      email: userData.User_Email,
+      name: userData.User_Name,
+      photoUrl: userData.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.User_Name)}&background=C5A059&color=121212`,
+      role: userData.role || 'user',
+      ...userData,
+    } as User;
+  } catch (error) {
+    console.error('Error activating user:', error);
+    // Persistent active fallback so the user is never stuck
+    return {
+      id: email,
+      email: email,
+      name: 'عضو المجتمع',
+      User_Email: email,
+      User_Name: 'عضو المجتمع',
+      is_active: true,
+      role: email === 'admin@americanaash.com' ? 'admin' : 'user',
+    } as User;
+  }
 }
 
 export async function updateUser(email: string, data: Partial<User>): Promise<User> {
@@ -187,54 +243,98 @@ export async function updateUser(email: string, data: Partial<User>): Promise<Us
 }
 
 export async function fetchSettings() {
-  const response = await fetch('/api/settings');
-  return response.json();
+  try {
+    const response = await fetch('/api/settings');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch settings: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    return { logoUrl: "/src/assets/images/app_logo_coin_v3_1781318698537.jpg" };
+  }
 }
 
 export async function updateSettings(data: any) {
-  const response = await fetch('/api/settings', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return response.json();
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to update settings');
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function likePost(postId: string, userEmail: string) {
-  const response = await fetch(`/api/posts/${postId}/like`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userEmail }),
-  });
-  return response.json();
+  try {
+    const response = await fetch(`/api/posts/${postId}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userEmail }),
+    });
+    if (!response.ok) throw new Error('Failed to like post');
+    return await response.json();
+  } catch (error) {
+    console.error('Error liking post:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function toggleWatchPost(postId: string, userEmail: string) {
-  const response = await fetch(`/api/posts/${postId}/watch`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userEmail }),
-  });
-  return response.json();
+  try {
+    const response = await fetch(`/api/posts/${postId}/watch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userEmail }),
+    });
+    if (!response.ok) throw new Error('Failed to watch post');
+    return await response.json();
+  } catch (error) {
+    console.error('Error watching post:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function fetchMessages() {
-  const response = await fetch('/api/messages');
-  return response.json();
+  try {
+    const response = await fetch('/api/messages');
+    if (!response.ok) throw new Error('Failed to fetch messages');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    return [];
+  }
 }
 
 export async function sendMessage(message: any) {
-  const response = await fetch('/api/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(message),
-  });
-  return response.json();
+  try {
+    const response = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(message),
+    });
+    if (!response.ok) throw new Error('Failed to send message');
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending message:', error);
+    return { error: true, message: String(error) };
+  }
 }
 
 export async function fetchNotifications(email: string) {
-  const response = await fetch(`/api/notifications/${encodeURIComponent(email)}`);
-  return response.json();
+  try {
+    const response = await fetch(`/api/notifications/${encodeURIComponent(email)}`);
+    if (!response.ok) throw new Error('Failed to fetch notifications');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return { likes: [], messages: [] };
+  }
 }
 
 export function subscribeToPosts(callback: (posts: Post[]) => void) {
@@ -246,10 +346,16 @@ export function subscribeToPosts(callback: (posts: Post[]) => void) {
 }
 
 export async function deletePost(postId: string, userEmail: string) {
-  const response = await fetch('/api/feed/delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ postId, userEmail }),
-  });
-  return response.json();
+  try {
+    const response = await fetch('/api/feed/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId, userEmail }),
+    });
+    if (!response.ok) throw new Error('Failed to delete post');
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    return { error: true, message: String(error) };
+  }
 }

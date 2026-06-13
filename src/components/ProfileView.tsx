@@ -126,7 +126,7 @@ export function ProfileView() {
                <div className="absolute top-0 right-0 w-32 h-32 bg-[#C5A059]/5 rounded-full blur-3xl" />
                <div>
                  <p className="text-xs text-gray-400 mb-2 font-black uppercase">رأس المال المستثمر</p>
-                 <p className="text-4xl font-black text-white italic tracking-tighter">
+                 <p className="text-2xl md:text-4xl font-black text-white italic tracking-tighter">
                    {user.Capital_Amount?.toLocaleString()} <span className="text-lg text-[#C5A059] not-italic">د.ك</span>
                  </p>
                </div>

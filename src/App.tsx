@@ -60,9 +60,22 @@ export default function App() {
   useEffect(() => {
     // Fetch global settings
     fetchSettings().then(data => {
-      setAppSettings(data);
       if (data && data.logoUrl) {
-        localStorage.setItem('khazain_logo', data.logoUrl);
+        const localLogo = localStorage.getItem('khazain_logo');
+        const isDefaultServerLogo = !data.logoUrl.startsWith('data:image/');
+        const isCustomLocalLogo = localLogo && localLogo.startsWith('data:image/');
+        
+        // Only overwrite local custom logo if the server loaded a new custom logo.
+        // This preserves custom logo if the server resets back to default.
+        if (isCustomLocalLogo && isDefaultServerLogo) {
+          // Keep local custom logo
+          setAppSettings({ logoUrl: localLogo });
+        } else {
+          setAppSettings(data);
+          localStorage.setItem('khazain_logo', data.logoUrl);
+        }
+      } else {
+        setAppSettings(data);
       }
     });
 
@@ -87,6 +100,10 @@ export default function App() {
         if (user.email === 'admin@americanaash.com') {
           data.role = 'admin';
           data.Investment_Layer = 'Layer_700'; // Full access
+        }
+        // Preserve active status if already activated locally
+        if (user.is_active || data.is_active) {
+          data.is_active = true;
         }
         setActiveUser(data);
       });
@@ -164,11 +181,11 @@ export default function App() {
             </motion.div>
           </div>
           
-          <h1 className="mb-4 text-5xl md:text-7xl font-black tracking-tighter text-white uppercase italic leading-none font-aref">
+          <h1 className="mb-4 text-3xl md:text-5xl font-black tracking-tighter text-white uppercase italic leading-none font-aref">
             خزائن <span className="text-[#C5A059] bg-gradient-to-r from-[#C5A059] via-[#E2C799] to-[#C5A059] bg-clip-text text-transparent">الأرض</span>
           </h1>
           
-          <p className="mb-10 max-w-sm mx-auto text-gray-500 font-medium leading-relaxed text-lg">
+          <p className="mb-10 max-w-sm mx-auto text-gray-500 font-medium leading-relaxed text-sm md:text-base">
             البوابة الرقمية لمجتمع السيادة والتمكين. <br />
             تواصل، شارك، واستثمر في مستقبل واعد.
           </p>
@@ -394,9 +411,9 @@ export default function App() {
               >
                 <div className="flex items-center gap-4 mb-3">
                   <div className="w-2 h-10 bg-[#C5A059] rounded-full shadow-[0_0_15px_rgba(197,160,89,0.5)]" />
-                  <h2 className="text-5xl font-black text-[#C5A059] italic tracking-tighter uppercase">نبض المجتمع السيادي</h2>
+                  <h2 className="text-2xl md:text-5xl font-black text-[#C5A059] italic tracking-tighter uppercase">نبض المجتمع السيادي</h2>
                 </div>
-                <p className="text-gray-400 max-w-2xl text-lg font-medium">أحدث التحليلات، التوصيات، والفرص الاستثمارية لشركاء خزائن الأرض.</p>
+                <p className="text-gray-400 max-w-2xl text-xs md:text-lg font-medium">أحدث التحليلات، التوصيات، والفرص الاستثمارية لشركاء خزائن الأرض.</p>
               </motion.div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">

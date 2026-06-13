@@ -52,12 +52,12 @@ export function SplashView({ onActivate, logoUrl }: SplashProps) {
           </motion.div>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-black text-white mb-4 tracking-tighter italic uppercase leading-none">
+        <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter italic uppercase leading-none">
           حوّل <span className="text-[#C5A059]">أفكارك الجريئة</span> <br />
           إلى واقع سيادي
         </h1>
         
-        <p className="text-gray-400 mb-12 text-xl font-medium tracking-wide max-w-lg mx-auto leading-relaxed">
+        <p className="text-gray-400 mb-6 text-sm md:text-base font-medium tracking-wide max-w-lg mx-auto leading-relaxed">
           الأداة الأسرع لتحويل الرؤى الاستثمارية إلى تمكين حقيقي. <br />
           انضم إلينا في مجتمع "خزائن الأرض".
         </p>

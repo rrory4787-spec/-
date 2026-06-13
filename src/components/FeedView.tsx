@@ -145,7 +145,7 @@ export function FeedView({ user, posts, onPost, onLike, onDelete, onWatch }: Fee
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-4xl lg:text-7xl font-black text-white italic tracking-tighter uppercase leading-none mb-3"
+            className="text-2xl md:text-5xl lg:text-7xl font-black text-white italic tracking-tighter uppercase leading-none mb-3"
           >
             حقّق <span className="text-[#C5A059]">أفكارك</span> الثورية
           </motion.h3>

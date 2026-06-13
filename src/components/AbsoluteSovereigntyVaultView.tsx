@@ -67,7 +67,7 @@ export function AbsoluteSovereigntyVaultView({ user, onBack }: AbsoluteSovereign
             />
           </div>
           <div>
-            <h2 className="text-4xl font-black text-white tracking-tighter">خزائن السيادة المطلقة</h2>
+            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tighter">خزائن السيادة المطلقة</h2>
             <div className="flex items-center gap-2 text-[10px] text-[#C5A059] font-mono mt-1">
               <Wifi className="h-3 w-3 animate-pulse" />
               <span>ENCRYPTED_CONNECTION: ACTIVE_700</span>

@@ -120,9 +120,19 @@ app.post("/api/users/:email/activate", async (req, res) => {
     const { email } = req.params;
     const dbData = readDB();
     if (!dbData.Users[email]) {
-      return res.status(404).json({ error: "User not found" });
+      // Self-heal: create and activate the user if not found
+      dbData.Users[email] = {
+        User_Email: email,
+        User_Name: email.split('@')[0] || "عضو المجتمع",
+        Capital_Amount: 0,
+        Investment_Layer: "General",
+        Sovereignty_Points: 0,
+        is_active: true,
+        updatedAt: new Date().toISOString()
+      };
+    } else {
+      dbData.Users[email].is_active = true;
     }
-    dbData.Users[email].is_active = true;
     writeDB(dbData);
     res.json(dbData.Users[email]);
   } catch (error) {
