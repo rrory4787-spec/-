@@ -18,10 +18,11 @@ import { AdminView } from './components/AdminView';
 import { CoursesView } from './components/CoursesView';
 import { EventsView } from './components/EventsView';
 import { NotificationCenter } from './components/NotificationCenter';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { MOCK_USER, MOCK_POSTS, MOCK_MEMBERS } from './lib/mock';
 import { useAuth } from './contexts/AuthContext';
 import { subscribeToPosts, createPost, likePost, deletePost, fetchFeed, fetchSettings, getOrCreateAppUser, toggleWatchPost } from './lib/db';
+import { backupPostToGoogleDrive } from './lib/googleDrive';
 import { Post, User } from './types';
 import { 
   LayoutGrid,
@@ -117,7 +118,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const { user, login, loginWithEmail, logout, activate, isLoading } = useAuth();
+  const { user, login, loginWithEmail, logout, activate, isLoading, googleAccessToken } = useAuth();
   const [activeUser, setActiveUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -394,7 +395,25 @@ export default function App() {
               posts={posts}
               onPost={async (content, imageUrl, videoUrl) => {
                 await createPost(activeUser as any, content, 'Modern', 'All', imageUrl, videoUrl);
-                // Refresh is handled by subscription
+                
+                if (googleAccessToken) {
+                  toast.loading('جاري نسخ المنشور احتياطياً إلى Google Drive...', { id: 'drive-backup' });
+                  const backupRes = await backupPostToGoogleDrive(googleAccessToken, {
+                    content,
+                    category: 'Modern',
+                    authorName: activeUser?.name || activeUser?.User_Name,
+                    authorEmail: activeUser?.email,
+                    imageUrl,
+                    videoUrl
+                  });
+                  if (backupRes.success) {
+                    toast.success('تم النسخ الاحتياطي ومزامنة المنشور إلى Google Drive بنجاح! ☁️', { id: 'drive-backup' });
+                  } else {
+                    toast.error('لم نتمكن من النسخ الاحتياطي في Google Drive. يرجى مراجعة الصلاحيات.', { id: 'drive-backup' });
+                  }
+                } else {
+                  toast.success('تم النشر بنجاح على التطبيق! (للمزامنة مع Google Drive، يرجى تسجيل الدخول بحساب Google أولاً)');
+                }
               }}
               onLike={async (postId) => {
                 await likePost(postId, activeUser.email);

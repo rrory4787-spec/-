@@ -359,3 +359,105 @@ export async function deletePost(postId: string, userEmail: string) {
     return { error: true, message: String(error) };
   }
 }
+
+export async function fetchTransactions(userEmail?: string) {
+  try {
+    const url = userEmail ? `/api/transactions?userEmail=${encodeURIComponent(userEmail)}` : '/api/transactions';
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch transactions');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    return [];
+  }
+}
+
+export async function createTransaction(txData: {
+  userEmail: string;
+  userName: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  method: 'Zain Cash' | 'CliQ';
+  referenceNumber?: string;
+  senderDetails?: string;
+  targetDetails?: string;
+  receiptImg?: string;
+  notes?: string;
+}) {
+  try {
+    const response = await fetch('/api/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(txData)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      let parsedError;
+      try { parsedError = JSON.parse(errorText); } catch(e) {}
+      throw new Error(parsedError?.error || 'Failed to create transaction');
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error('Error creating transaction:', error);
+    throw error;
+  }
+}
+
+export async function approveTransaction(id: string) {
+  try {
+    const response = await fetch(`/api/transactions/${id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      let parsedError;
+      try { parsedError = JSON.parse(errorText); } catch(e) {}
+      throw new Error(parsedError?.error || 'Failed to approve transaction');
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error('Error approving transaction:', error);
+    throw error;
+  }
+}
+
+export async function rejectTransaction(id: string, rejectReason?: string) {
+  try {
+    const response = await fetch(`/api/transactions/${id}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rejectReason })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      let parsedError;
+      try { parsedError = JSON.parse(errorText); } catch(e) {}
+      throw new Error(parsedError?.error || 'Failed to reject transaction');
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error('Error rejecting transaction:', error);
+    throw error;
+  }
+}
+
+export async function p2pTransfer(senderEmail: string, recipientEmail: string, amount: number, notes?: string) {
+  try {
+    const response = await fetch('/api/transactions/transfer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderEmail, recipientEmail, amount, notes })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      let parsedError;
+      try { parsedError = JSON.parse(errorText); } catch(e) {}
+      throw new Error(parsedError?.error || 'Failed to perform peer-to-peer transfer');
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error('Error in peer-to-peer transfer:', error);
+    throw error;
+  }
+}

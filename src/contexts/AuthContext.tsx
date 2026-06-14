@@ -7,6 +7,7 @@ import { getOrCreateAppUser, activateUser as dbActivate } from '../lib/db';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  googleAccessToken: string | null;
   login: () => Promise<void>;
   loginWithEmail: (email: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -15,6 +16,9 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Globals to store the access token in memory across hot-reloads and module boundaries
+let cachedAccessToken: string | null = null;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -25,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
   });
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(cachedAccessToken);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,6 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch {
           setUser(null);
         }
+        cachedAccessToken = null;
+        setGoogleAccessToken(null);
       }
       setLoading(false);
     });
@@ -65,7 +72,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    // Add scopes requested by the user for Google Drive backup
+    provider.addScope('https://www.googleapis.com/auth/drive');
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        cachedAccessToken = credential.accessToken;
+        setGoogleAccessToken(credential.accessToken);
+      }
+    } catch (e) {
+      console.error("Google Sign In with Popup error:", e);
+      throw e;
+    }
   };
 
   const loginWithEmail = async (email: string, name: string) => {
@@ -110,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithEmail, logout, activate, updateUserData }}>
+    <AuthContext.Provider value={{ user, loading, googleAccessToken, login, loginWithEmail, logout, activate, updateUserData }}>
       {children}
     </AuthContext.Provider>
   );

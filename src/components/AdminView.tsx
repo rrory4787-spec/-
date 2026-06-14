@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, 
   Upload, 
@@ -19,7 +19,11 @@ import {
   X,
   GraduationCap,
   Calendar,
-  BookOpen
+  BookOpen,
+  Wallet,
+  Check,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -33,7 +37,10 @@ import {
   fetchAllUsers, 
   updateUser,
   createCourse,
-  createEvent
+  createEvent,
+  fetchTransactions,
+  approveTransaction,
+  rejectTransaction
 } from '../lib/db';
 import { Post, User, Course, Event } from '../types';
 
@@ -43,7 +50,7 @@ interface AdminViewProps {
 }
 
 export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
-  const [settings, setSettings] = useState<{ logoUrl: string } | null>(null);
+  const [settings, setSettings] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -58,7 +65,21 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   // App Sections State
-  const [activeAdminTab, setActiveAdminTab] = useState<'settings' | 'members' | 'posts' | 'courses' | 'events'>('settings');
+  const [activeAdminTab, setActiveAdminTab] = useState<'settings' | 'members' | 'posts' | 'courses' | 'events' | 'wallet'>('settings');
+
+  // Wallet Administration States
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [savingWalletSettings, setSavingWalletSettings] = useState(false);
+  const [walletSuccess, setWalletSuccess] = useState(false);
+  
+  const [clioAlias, setClioAlias] = useState('');
+  const [clioPhone, setClioPhone] = useState('');
+  const [clioName, setClioName] = useState('');
+  const [currencySymbol, setCurrencySymbol] = useState('');
+
+  const [rejectingTxId, setRejectingTxId] = useState<string | null>(null);
+  const [rejectReasonText, setRejectReasonText] = useState('');
+  const [adminPreviewImg, setAdminPreviewImg] = useState<string | null>(null);
 
   // New Post State
   const [postDraft, setPostDraft] = useState<Partial<Post>>({
@@ -93,14 +114,74 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
     Promise.all([
       fetchSettings(),
       fetchFeed(true),
-      fetchAllUsers()
-    ]).then(([settingsData, postsData, usersData]) => {
+      fetchAllUsers(),
+      fetchTransactions()
+    ]).then(([settingsData, postsData, usersData, txsData]) => {
       setSettings(settingsData);
       setAllPosts(postsData);
       setAllUsers(usersData);
+      setAllTransactions(txsData || []);
+      
+      if (settingsData) {
+        setClioAlias(settingsData.clioAlias || 'khazain.earth');
+        setClioPhone(settingsData.clioPhone || '0790000000');
+        setClioName(settingsData.clioName || 'الخزائن الأرض للتمويل الذاتي');
+        setCurrencySymbol(settingsData.currencySymbol || 'د.أ');
+      }
       setLoading(false);
     });
   }, []);
+
+  const handleSaveWalletSettings = async () => {
+    setSavingWalletSettings(true);
+    try {
+      const updated = await updateSettings({
+        clioAlias,
+        clioPhone,
+        clioName,
+        currencySymbol
+      });
+      setSettings(updated);
+      setWalletSuccess(true);
+      setTimeout(() => setWalletSuccess(false), 3000);
+    } catch (error) {
+      console.error("Failed to save wallet settings:", error);
+    } finally {
+      setSavingWalletSettings(false);
+    }
+  };
+
+  const handleApproveTransaction = async (txId: string) => {
+    try {
+      await approveTransaction(txId);
+      const [txs, users] = await Promise.all([
+        fetchTransactions(),
+        fetchAllUsers()
+      ]);
+      setAllTransactions(txs);
+      setAllUsers(users);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "حدث خطأ أثناء الموافقة على الطلب");
+    }
+  };
+
+  const handleRejectTransactionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectingTxId) return;
+    try {
+      await rejectTransaction(rejectingTxId, rejectReasonText || "مرفوض من مدير النظام");
+      setRejectingTxId(null);
+      setRejectReasonText('');
+      const [txs, users] = await Promise.all([
+        fetchTransactions(),
+        fetchAllUsers()
+      ]);
+      setAllTransactions(txs);
+      setAllUsers(users);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "حدث خطأ أثناء رفض الطلب");
+    }
+  };
 
   const handleToggleStatus = async (targetUser: User) => {
     setUpdatingUserId(targetUser.email);
@@ -269,6 +350,14 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
           >
             <Calendar className="h-5 w-5" />
             الفعاليات
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => setActiveAdminTab('wallet')}
+            className={`flex-1 min-w-[120px] h-12 rounded-xl font-bold gap-2 ${activeAdminTab === 'wallet' ? 'bg-[#C5A059] text-black hover:bg-[#C5A059]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <Wallet className="h-5 w-5" />
+            المحفظة
           </Button>
         </div>
       </div>
@@ -629,6 +718,371 @@ export function AdminView({ user, onSettingsUpdate }: AdminViewProps) {
                 )}
               </CardContent>
             </Card>
+          </motion.div>
+        ) : activeAdminTab === 'wallet' ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-6 text-right"
+            dir="rtl"
+          >
+            {/* Wallet Settings Card */}
+            <Card className="bg-[#111111] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-[#C5A059]" />
+                  إعدادات محفظة الإدارة للتحويل اليدوي (Zain Cash & CliQ)
+                </CardTitle>
+                <CardDescription className="text-right">
+                  البيانات التي تظهر للأعضاء بهاتفهم عند رغبتهم بالإيداع والتحويل يدوياً.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400">الاسم الرباعي للمستفيد (يظهر للمحول بـ CliQ)</label>
+                    <Input 
+                      value={clioName}
+                      onChange={e => setClioName(e.target.value)}
+                      placeholder="مثال: أحمد محمد علي حسن"
+                      className="bg-black border-gray-800 text-white font-sans text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400">رقم محفظة زين كاش للإدارة</label>
+                    <Input 
+                      value={clioPhone}
+                      onChange={e => setClioPhone(e.target.value)}
+                      placeholder="مثال: 0791234567"
+                      className="bg-black border-gray-800 text-white font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400">ألياس كليك الإدارة (CliQ Alias)</label>
+                    <Input 
+                      value={clioAlias}
+                      onChange={e => setClioAlias(e.target.value)}
+                      placeholder="مثال: khazain.earth"
+                      className="bg-black border-gray-800 text-white font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400">رمز العملة داخل التطبيق (مثلاً د.أ / د.ك)</label>
+                    <Input 
+                      value={currencySymbol}
+                      onChange={e => setCurrencySymbol(e.target.value)}
+                      placeholder="مثال: د.أ"
+                      className="bg-black border-gray-800 text-white font-sans text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <Button 
+                    onClick={handleSaveWalletSettings}
+                    disabled={savingWalletSettings}
+                    className="bg-[#C5A059] text-black hover:bg-[#C5A059]/90 font-black gap-2 h-11 px-6 rounded-xl border-0"
+                  >
+                    {savingWalletSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    حفظ إعدادات المحفظة
+                  </Button>
+
+                  {walletSuccess && (
+                    <span className="text-xs text-green-500 font-bold flex items-center gap-1 bg-green-500/10 px-3 py-1.5 rounded-lg border border-green-500/20">
+                      <CheckCircle2 className="h-4 w-4" /> تم تحديث بيانات المحفظة بنجاح
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pending Deposits Card */}
+            <Card className="bg-[#111111] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-green-500" />
+                  طلب الإيداع قيد الانتظار ({allTransactions.filter(t => t.type === 'deposit' && t.status === 'pending').length})
+                </CardTitle>
+                <CardDescription className="text-right">
+                  يرجى التحقق من وصول المبلغ الحقيقي لحسابك أولاً، ثم الموافقة لشحن محفظة العضو فورياً.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {allTransactions.filter(t => t.type === 'deposit' && t.status === 'pending').length === 0 ? (
+                  <p className="text-xs text-gray-500 p-6 text-center">لا يوجد أي طلبات إيصال معلقة حالياً.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-white/5 text-gray-400 uppercase font-black text-[10px]">
+                        <tr>
+                          <th className="p-4">اسم / البريد العميل</th>
+                          <th className="p-4">القيمة المطلوب شحنها</th>
+                          <th className="p-4">رقم المرجع (TxID)</th>
+                          <th className="p-4">حساب المحوّل منه</th>
+                          <th className="p-4">إيصال التحويل</th>
+                          <th className="p-4 text-left">إجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-850">
+                        {allTransactions.filter(t => t.type === 'deposit' && t.status === 'pending').map((tx: any) => (
+                          <tr key={tx.id} className="hover:bg-white/5 transition-colors font-sans decoration-0">
+                            <td className="p-4">
+                              <div className="font-bold text-white mb-0.5">{tx.userName}</div>
+                              <div className="text-gray-500 font-mono scale-95 origin-right">{tx.userEmail}</div>
+                            </td>
+                            <td className="p-4 font-black text-green-500 text-sm">
+                              {tx.amount} {currencySymbol}
+                            </td>
+                            <td className="p-4 font-mono font-bold text-yellow-600">{tx.referenceNumber}</td>
+                            <td className="p-4 text-gray-300">{tx.senderDetails}</td>
+                            <td className="p-4">
+                              {tx.receiptImg ? (
+                                <button 
+                                  type="button"
+                                  onClick={() => setAdminPreviewImg(tx.receiptImg)}
+                                  className="text-blue-400 hover:underline flex items-center gap-1 font-bold"
+                                >
+                                  <FileText className="h-4 w-4" /> معاينة الإيصال
+                                </button>
+                              ) : (
+                                <span className="text-gray-600 italic">بدون صورة إشعار</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-left flex gap-2 justify-end">
+                              <Button 
+                                size="sm"
+                                onClick={() => handleApproveTransaction(tx.id)}
+                                className="bg-green-600 text-white font-bold h-8 text-[11px] rounded-lg gap-1 hover:bg-green-700 border-0"
+                              >
+                                <Check className="h-3 w-3" /> قبول الإيداع
+                              </Button>
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setRejectingTxId(tx.id)}
+                                className="border-red-500/20 text-red-500 h-8 text-[11px] rounded-lg hover:bg-red-500/10"
+                              >
+                                <span>رفض</span>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pending Withdrawals Card */}
+            <Card className="bg-[#111111] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-red-500" />
+                  طلب سحب قيد الانتظار ({allTransactions.filter(t => t.type === 'withdrawal' && t.status === 'pending').length})
+                </CardTitle>
+                <CardDescription className="text-right">
+                  يرجى تسليم القيمة المالية من محفظتك زين كاش أو كليك للعميل يدوياً، ثم انقر تأكيد السحب.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {allTransactions.filter(t => t.type === 'withdrawal' && t.status === 'pending').length === 0 ? (
+                  <p className="text-xs text-gray-500 p-6 text-center">لا يوجد أي طلب سحب معلق حالياً.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-white/5 text-gray-400 uppercase font-black text-[10px]">
+                        <tr>
+                          <th className="p-4">العميل</th>
+                          <th className="p-4">نوع المحفظة</th>
+                          <th className="p-4">القيمة المستحقة</th>
+                          <th className="p-4">حساب الاستلام الشخصي للعميل</th>
+                          <th className="p-4">ملاحظات</th>
+                          <th className="p-4 text-left">إجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-850 font-sans">
+                        {allTransactions.filter(t => t.type === 'withdrawal' && t.status === 'pending').map((tx: any) => (
+                          <tr key={tx.id} className="hover:bg-white/5 transition-colors">
+                            <td className="p-4">
+                              <div className="font-bold text-white mb-0.5">{tx.userName}</div>
+                              <div className="text-gray-500 font-mono scale-95 origin-right">{tx.userEmail}</div>
+                            </td>
+                            <td className="p-4 font-black text-[#C5A059]">{tx.method}</td>
+                            <td className="p-4 font-black text-red-500 text-sm">
+                              {tx.amount} {currencySymbol}
+                            </td>
+                            <td className="p-4">
+                              <div className="text-white font-mono bg-white/5 rounded-lg p-3 max-w-xs break-all text-right leading-relaxed border border-gray-850">
+                                {tx.targetDetails}
+                              </div>
+                            </td>
+                            <td className="p-4 text-gray-400 font-sans">{tx.notes}</td>
+                            <td className="p-4 text-left flex gap-2 justify-end">
+                              <Button 
+                                size="sm"
+                                onClick={() => handleApproveTransaction(tx.id)}
+                                className="bg-emerald-600 text-white font-bold h-8 text-[11px] rounded-lg gap-1 hover:bg-emerald-700 border-0"
+                              >
+                                <Check className="h-3 w-3" /> تم التحويل يدوياً
+                              </Button>
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setRejectingTxId(tx.id)}
+                                className="border-red-500/20 text-red-500 h-8 text-[11px] rounded-lg hover:bg-red-500/10"
+                              >
+                                <span>رفض وإرجاع الرصيد</span>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* All transactions history audit trail ledger */}
+            <Card className="bg-[#111111] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <History className="h-5 w-5 text-gray-400" />
+                  الأرشيف الكامل لجميع العمليات المالية للتسوية ({allTransactions.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {allTransactions.length === 0 ? (
+                  <p className="text-xs text-gray-500 p-6 text-center">لا توجد عمليات مسجلة حتى الآن.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead className="bg-white/5 text-gray-400 uppercase font-black text-[10px]">
+                        <tr>
+                          <th className="p-4">النوع المعاملة</th>
+                          <th className="p-4">اسم / بريد المشترك</th>
+                          <th className="p-4">القيمة والعملة</th>
+                          <th className="p-4">الوسيط / المرجع / جهة P2P</th>
+                          <th className="p-4">تاريخ الطلب</th>
+                          <th className="p-4 text-left">الحالة النهائية والتدقيق</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-850 font-sans">
+                        {allTransactions.map((tx: any) => (
+                          <tr key={tx.id} className="hover:bg-white/5 transition-colors">
+                            <td className="p-4 font-bold">
+                              {tx.type === 'deposit' && <span className="text-green-500">إيداع يدوي</span>}
+                              {tx.type === 'withdrawal' && <span className="text-red-500">سحب مالي</span>}
+                              {tx.type === 'transfer_out' && <span className="text-blue-400">تحويل صادر P2P</span>}
+                              {tx.type === 'transfer_in' && <span className="text-emerald-400">تحويل وارد P2P</span>}
+                            </td>
+                            <td className="p-4">
+                              <div className="text-white font-bold">{tx.userName}</div>
+                              <div className="text-gray-500 font-mono scale-95 origin-right">{tx.userEmail}</div>
+                            </td>
+                            <td className="p-4 font-black">
+                              {tx.amount} {currencySymbol}
+                            </td>
+                            <td className="p-4 text-xs font-mono text-gray-400">
+                              {tx.type === 'deposit' && `ملف مرجع: ${tx.referenceNumber}`}
+                              {tx.type === 'withdrawal' && `CliQ/Zain: ${tx.targetDetails}`}
+                              {tx.type === 'transfer_out' && `إلى: ${tx.recipientEmail}`}
+                              {tx.type === 'transfer_in' && `من: ${tx.senderEmail}`}
+                            </td>
+                            <td className="p-4 text-[10px] text-gray-500">
+                              {tx.createdAt && new Date(tx.createdAt).toLocaleString('ar-EG')}
+                            </td>
+                            <td className="p-4 text-left">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                tx.status === 'approved' ? 'bg-green-500/10 text-green-500' :
+                                tx.status === 'rejected' ? 'bg-red-500/10 text-red-500' :
+                                'bg-yellow-500/10 text-yellow-600'
+                              }`}>
+                                {tx.status === 'approved' && 'مقبول / تمت التسوية'}
+                                {tx.status === 'rejected' && `مرفوض: ${tx.rejectReason || 'بدون سبب'}`}
+                                {tx.status === 'pending' && 'قيد الانتظار'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Rejection Dialog Modal */}
+            <AnimatePresence>
+              {rejectingTxId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 font-sans">
+                  <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-sm overflow-hidden p-6 relative text-right"
+                    dir="rtl"
+                  >
+                    <button 
+                      type="button"
+                      onClick={() => setRejectingTxId(null)}
+                      className="absolute top-4 left-4 text-gray-500 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <h4 className="text-sm font-black text-white mb-2 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      يرجى تحديد سبب الرفض
+                    </h4>
+                    <p className="text-[11px] text-gray-500 mb-4 font-sans">سيتم إرجاع الرصيد المقصوص تلقائياً للعميل إذا كانت المعاملة طلب سحب مالي.</p>
+                    <form onSubmit={handleRejectTransactionSubmit} className="space-y-4">
+                      <Input
+                        required
+                        value={rejectReasonText}
+                        onChange={e => setRejectReasonText(e.target.value)}
+                        placeholder="مثال: رقم المرجع غير صحيح أو لم يصل التحويل"
+                        className="bg-black border-gray-800 text-xs text-white"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          onClick={() => setRejectingTxId(null)}
+                          className="h-9 text-xs"
+                        >
+                          تراجع
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          className="bg-red-600 hover:bg-red-700 h-9 text-xs text-white font-bold px-4 rounded-xl border-0"
+                        >
+                          تأكيد الرفض
+                        </Button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* Receipt Zoom overlay lightbox */}
+            <AnimatePresence>
+              {adminPreviewImg && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90">
+                  <div className="relative w-full max-w-lg">
+                    <button 
+                      type="button"
+                      onClick={() => setAdminPreviewImg(null)}
+                      className="absolute -top-10 left-0 text-white flex items-center gap-1.5 text-xs bg-white/10 px-3 py-1.5 rounded-lg"
+                    >
+                      <X className="h-4 w-4" /> إغلاق المعاينة
+                    </button>
+                    <img src={adminPreviewImg} alt="Receipt Admin Review" className="w-full max-h-[80vh] object-contain rounded-xl border border-gray-800" />
+                  </div>
+                </div>
+              )}
+            </AnimatePresence>
           </motion.div>
         ) : (
           <motion.div
